@@ -13,12 +13,12 @@ function App() {
   return (
     <BrowserRouter>
       <Routes>
-        <Route path="/" element={<Navigate to="/dashboard" replace />} />
+       
         <Route
           path="/"
           element={<Layout currentPage="dashboard" />}
         >
-          <Route path="dashboard" element={<Dashboard />} />
+          <Route path="" element={<Dashboard />} />
           <Route path="manage-complaints" element={<ManageComplaints />} />
           <Route path="chatbot" element={<Chat />} />
           <Route path="settings" element={<Settings />} />
