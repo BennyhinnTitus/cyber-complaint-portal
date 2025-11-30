@@ -1,6 +1,12 @@
 import React from 'react';
 import { BrowserRouter, Routes, Route, Navigate } from 'react-router-dom';
-import Dashboard from './pages/Dashboard';
+import { Layout } from './components/Layout';
+import {Dashboard} from './pages/Dashboard';
+import { ManageComplaints } from './components/ManageComplaints';
+import { Chatbot } from './components/Chatbot';
+import { Settings } from './components/Settings';
+import { Help } from './components/Help';
+import { NewComplaint } from './components/NewComplaint';
 import Chat from './pages/Chat';
 
 function App() {
@@ -8,8 +14,17 @@ function App() {
     <BrowserRouter>
       <Routes>
         <Route path="/" element={<Navigate to="/dashboard" replace />} />
-        <Route path="/dashboard" element={<Dashboard />} />
-        <Route path="/chat" element={<Chat />} />
+        <Route
+          path="/"
+          element={<Layout currentPage="dashboard" />}
+        >
+          <Route path="dashboard" element={<Dashboard />} />
+          <Route path="manage-complaints" element={<ManageComplaints />} />
+          <Route path="chatbot" element={<Chat />} />
+          <Route path="settings" element={<Settings />} />
+          <Route path="help" element={<Help />} />
+          <Route path="new-complaint" element={<NewComplaint />} />
+        </Route>
       </Routes>
     </BrowserRouter>
   );
