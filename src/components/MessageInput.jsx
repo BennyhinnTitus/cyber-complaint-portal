@@ -4,6 +4,21 @@ import { Send, Paperclip, Image as ImageIcon } from 'lucide-react';
 export default function MessageInput({ value, onChange, onSend, onSendFiles }) {
   const imageInputRef = useRef(null);
   const fileInputRef = useRef(null);
+  const textareaRef = useRef(null);
+
+  // Auto-resize logic
+  const adjustHeight = () => {
+    const ta = textareaRef.current;
+    if (!ta) return;
+
+    ta.style.height = "auto";
+    ta.style.height = Math.min(150, ta.scrollHeight) + "px"; // limit expansion
+  };
+
+  const handleInput = (e) => {
+    onChange(e.target.value);
+    adjustHeight();
+  };
 
   const handleKeyDown = (e) => {
     if (e.key === 'Enter' && !e.shiftKey) {
@@ -12,29 +27,29 @@ export default function MessageInput({ value, onChange, onSend, onSendFiles }) {
     }
   };
 
-  // ---- File / Image Triggers ----
+  // File pickers
   const handleImageClick = () => imageInputRef.current?.click();
   const handleFileClick = () => fileInputRef.current?.click();
-
-  const handleImageChange = (e) => {
-    if (e.target.files?.length > 0) {
-      onSendFiles(e.target.files);
-      e.target.value = '';
-    }
-  };
 
   const handleFileChange = (e) => {
     if (e.target.files?.length > 0) {
       onSendFiles(e.target.files);
-      e.target.value = '';
+      e.target.value = "";
+    }
+  };
+
+  const handleImageChange = (e) => {
+    if (e.target.files?.length > 0) {
+      onSendFiles(e.target.files);
+      e.target.value = "";
     }
   };
 
   return (
     <div className="px-6 py-4 bg-[#F5F5F5] border-t border-[#D0D7DE]">
-      <div className="flex items-center gap-3">
+      <div className="flex items-end gap-3">
 
-        {/* Hidden Inputs */}
+        {/* Hidden inputs */}
         <input
           type="file"
           accept="image/*"
@@ -42,7 +57,6 @@ export default function MessageInput({ value, onChange, onSend, onSendFiles }) {
           onChange={handleImageChange}
           className="hidden"
         />
-
         <input
           type="file"
           multiple
@@ -51,7 +65,7 @@ export default function MessageInput({ value, onChange, onSend, onSendFiles }) {
           className="hidden"
         />
 
-        {/* Image Button */}
+        {/* Image button */}
         <button
           type="button"
           onClick={handleImageClick}
@@ -61,7 +75,7 @@ export default function MessageInput({ value, onChange, onSend, onSendFiles }) {
           <ImageIcon className="w-5 h-5 text-gray-600" />
         </button>
 
-        {/* File Button */}
+        {/* File button */}
         <button
           type="button"
           onClick={handleFileClick}
@@ -71,26 +85,34 @@ export default function MessageInput({ value, onChange, onSend, onSendFiles }) {
           <Paperclip className="w-5 h-5 text-gray-600" />
         </button>
 
-        {/* Textarea (from Code 1 style) */}
-        <textarea
-          value={value}
-          onChange={(e) => onChange(e.target.value)}
-          onKeyDown={handleKeyDown}
-          placeholder="Type your message... (Shift+Enter for new line)"
-          className="flex-1 px-3 py-1 border border-gray-300 rounded-full bg-white focus:outline-none focus:ring-2 focus:ring-[#0066CC] text-sm h-9 resize-none"
-          rows="1"
-        />
+        {/* ChatGPT-style auto-growing input */}
+        <div className="flex-1">
+          <textarea
+            ref={textareaRef}
+            value={value}
+            onChange={handleInput}
+            onKeyDown={handleKeyDown}
+            placeholder="Type your message... (Shift+Enter for new line)"
+            className="
+              w-full px-4 py-2 border border-gray-300 rounded-full
+              bg-white resize-none overflow-hidden
+              focus:outline-none focus:ring-2 focus:ring-[#0066CC]
+              text-sm leading-5
+            "
+            rows={1}
+          />
+        </div>
 
-        {/* Send Button */}
+        {/* Send button */}
         <button
           type="button"
           onClick={onSend}
-          className="px-4 py-2 bg-[#0066CC] hover:bg-[#0052A3] text-white rounded-lg flex items-center gap-2 transition shadow-sm"
+          className="px-4 py-2 bg-[#0066CC] hover:bg-[#0052A3] 
+                     text-white rounded-full flex items-center gap-2 transition shadow-sm"
         >
           <Send className="w-5 h-5" />
           <span className="text-sm font-medium">Send</span>
         </button>
-
       </div>
     </div>
   );
