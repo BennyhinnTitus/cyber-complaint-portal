@@ -1,9 +1,9 @@
 import { useState, useRef, useEffect } from "react";
 import { Shield, FileText, Activity, AlertTriangle, BookOpen } from "lucide-react";
-import ChatMessage from "./components/ChatMessage";
-import QuickActionButton from "./components/QuickActionButton";
-import MessageInput from "./components/MessageInput";
-import Footer from "./components/Footer";
+import ChatMessage from "../components/ChatMessage";
+import QuickActionButton from "../components/QuickActionButton";
+import MessageInput from "../components/MessageInput";
+import Footer from "../components/Footer";
 
 /**
  * FINAL MERGED App.jsx (priority: App.jsx)
