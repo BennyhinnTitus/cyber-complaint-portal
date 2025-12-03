@@ -1,4 +1,4 @@
-import { Paperclip } from 'lucide-react';
+import { Calendar, Clock, Paperclip } from 'lucide-react';
 
 function formatFileSize(bytes) {
   if (bytes < 1024) return `${bytes} B`;
@@ -13,30 +13,39 @@ const ChatMessage = ({
   showRoleDropdown,
   showDatePicker,
   showTimePicker,
-  onQuickAnswer
+  onQuickAnswer,   // main callback
+  onFieldSelect    // secondary callback (merged support)
 }) => {
   const isUser = message.sender === 'user';
 
+  // unified callback handler
+  const sendValue = (val) => {
+    if (onQuickAnswer) onQuickAnswer(val);
+    else if (onFieldSelect) onFieldSelect(val);
+  };
+
   const handleRoleChange = (e) => {
     const val = e.target.value;
-    if (!val || !onQuickAnswer) return;
-    onQuickAnswer(val);
+    if (val) sendValue(val);
     e.target.value = '';
   };
 
   const handleDateChange = (e) => {
-    const val = e.target.value; // YYYY-MM-DD
-    if (!val || !onQuickAnswer) return;
-    onQuickAnswer(val);
-    e.target.value = '';
+    const val = e.target.value;
+    if (val) sendValue(val);
   };
 
   const handleTimeChange = (e) => {
-    const val = e.target.value; // HH:MM
-    if (!val || !onQuickAnswer) return;
-    onQuickAnswer(val);
-    e.target.value = '';
+    const val = e.target.value;
+    if (val) sendValue(val);
   };
+
+  const roles = [
+    "Defence personnel",
+    "Ex veteran / retired officer",
+    "Family member / dependent",
+    "MoD authority"
+  ];
 
   return (
     <div className={`flex ${isUser ? 'justify-end' : 'justify-start'}`}>
@@ -46,15 +55,63 @@ const ChatMessage = ({
           ${isUser ? 'bg-[#0066CC] text-white rounded-br-sm' : 'bg-[#F2F4F7] text-gray-900 rounded-bl-sm'}
         `}
       >
-        {/* Text */}
+
+        {/* ---------- ROLE DROPDOWN ---------- */}
+        {!isUser && showRoleDropdown && (
+          <div className="mb-3">
+            <select
+              defaultValue=""
+              onChange={handleRoleChange}
+              className="w-full px-3 py-2 border border-gray-300 rounded-full bg-white text-xs focus:ring-2 focus:ring-[#0066CC]"
+            >
+              <option value="" disabled>Select your role</option>
+              {roles.map(role => (
+                <option key={role} value={role}>{role}</option>
+              ))}
+            </select>
+          </div>
+        )}
+
+        {/* ---------- DATE PICKER ---------- */}
+        {!isUser && showDatePicker && (
+          <div className="mb-3 flex items-center gap-2 text-xs">
+            <Calendar className="w-5 h-5 text-gray-600" />
+            <input
+              type="date"
+              onChange={handleDateChange}
+              className="flex-1 px-3 py-2 rounded-full border border-gray-300 bg-white focus:outline-none focus:ring-2 focus:ring-[#0066CC]"
+            />
+          </div>
+        )}
+
+        {/* ---------- TIME PICKER ---------- */}
+        {!isUser && showTimePicker && (
+          <div className="mb-3 flex items-center gap-2 text-xs">
+            <Clock className="w-5 h-5 text-gray-600" />
+            <input
+              type="time"
+              onChange={handleTimeChange}
+              className="flex-1 px-3 py-2 rounded-full border border-gray-300 bg-white focus:outline-none focus:ring-2 focus:ring-[#0066CC]"
+            />
+          </div>
+        )}
+
+        {/* Inline hint */}
+        {!isUser && (showRoleDropdown || showDatePicker || showTimePicker) && (
+          <span className="text-[10px] text-gray-500">
+            You can also answer via the text box below.
+          </span>
+        )}
+
+        {/* ---------- MESSAGE TEXT ---------- */}
         {message.text && (
-          <p className="text-sm whitespace-pre-wrap break-words">
+          <p className="text-sm whitespace-pre-wrap break-words mt-2">
             {message.text}
           </p>
         )}
 
-        {/* Attachments */}
-        {message.attachments && message.attachments.length > 0 && (
+        {/* ---------- ATTACHMENTS ---------- */}
+        {message.attachments?.length > 0 && (
           <div className="mt-2 space-y-2">
             {message.attachments.map(att =>
               att.type === 'image' ? (
@@ -86,56 +143,7 @@ const ChatMessage = ({
           </div>
         )}
 
-        {/* Inline Controls: Role / Date / Time */}
-        {!isUser && (
-          <div className="mt-2 space-y-2">
-            {showRoleDropdown && (
-              <select
-                defaultValue=""
-                onChange={handleRoleChange}
-                className="w-full px-3 py-2 rounded-full border border-gray-300 bg-white text-xs focus:outline-none focus:ring-2 focus:ring-[#0066CC]"
-              >
-                <option value="" disabled>
-                  Select your role
-                </option>
-                <option value="defence personnel">Defence personnel</option>
-                <option value="ex veteran/retired officer">Ex veteran / retired officer</option>
-                <option value="family member / dependent">Family member / dependent</option>
-                <option value="MoD authority">MoD authority</option>
-              </select>
-            )}
-
-            {showDatePicker && (
-              <div className="flex flex-col gap-1 text-xs">
-                <span className="text-gray-600">Tap to choose date:</span>
-                <input
-                  type="date"
-                  onChange={handleDateChange}
-                  className="px-3 py-2 rounded-full border border-gray-300 bg-white focus:outline-none focus:ring-2 focus:ring-[#0066CC]"
-                />
-              </div>
-            )}
-
-            {showTimePicker && (
-              <div className="flex flex-col gap-1 text-xs">
-                <span className="text-gray-600">Tap to choose time:</span>
-                <input
-                  type="time"
-                  onChange={handleTimeChange}
-                  className="px-3 py-2 rounded-full border border-gray-300 bg-white focus:outline-none focus:ring-2 focus:ring-[#0066CC]"
-                />
-              </div>
-            )}
-
-            {(showRoleDropdown || showDatePicker || showTimePicker) && (
-              <span className="text-[10px] text-gray-500">
-                You can also answer via the text box below if needed.
-              </span>
-            )}
-          </div>
-        )}
-
-        {/* Time */}
+        {/* ---------- TIMESTAMP ---------- */}
         <div
           className={`mt-1 text-[10px] ${
             isUser ? 'text-blue-100' : 'text-gray-500'
