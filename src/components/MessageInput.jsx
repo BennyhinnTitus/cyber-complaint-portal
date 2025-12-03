@@ -77,8 +77,8 @@ export default function MessageInput({ value, onChange, onSend, onSendFiles }) {
           onChange={(e) => onChange(e.target.value)}
           onKeyDown={handleKeyDown}
           placeholder="Type your message... (Shift+Enter for new line)"
-          className="flex-1 px-4 py-2 border border-gray-300 rounded-lg resize-none bg-white focus:outline-none focus:ring-2 focus:ring-[#0066CC] text-sm"
-          rows="2"
+          className="flex-1 px-3 py-1 border border-gray-300 rounded-full bg-white focus:outline-none focus:ring-2 focus:ring-[#0066CC] text-sm h-9 resize-none"
+          rows="1"
         />
 
         {/* Send Button */}
