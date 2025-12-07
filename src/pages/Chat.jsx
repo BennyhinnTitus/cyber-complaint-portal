@@ -237,10 +237,16 @@ const [isPlaybookMode, setIsPlaybookMode] = useState(false);
       const finalPayload = { ...fileReportData };
       pushAiMessage(JSON.stringify(finalPayload, null, 2));
 
-      // reset
+      // Reset to normal chat mode
       setIsFileReportActive(false);
       setIsEvidenceStep(false);
       setFileReportStep(0);
+      
+      // Auto-switch to normal chat
+      setTimeout(() => {
+        pushAiMessage("✅ File report submitted successfully! You can now ask me anything or start another quick action.");
+      }, 500);
+      
       return;
     }
 
@@ -364,63 +370,71 @@ const [isPlaybookMode, setIsPlaybookMode] = useState(false);
     };
 
     setMessages((prev) => [...prev, userMessage]);
-      // --------------------------------------------------
-  // 📘 PLAYBOOK MODE (CERT-STYLE)
-  // --------------------------------------------------
-  if (isPlaybookMode) {
-    let parsed;
+    
+    // --------------------------------------------------
+    // 📘 PLAYBOOK MODE (CERT-STYLE)
+    // --------------------------------------------------
+    if (isPlaybookMode) {
+      let parsed;
 
-    // Validate JSON
-    try {
-      parsed = JSON.parse(userText);
-    } catch {
-      pushAiMessage("❌ Invalid JSON. Please paste valid JSON.");
+      // Validate JSON
+      try {
+        parsed = JSON.parse(userText);
+      } catch {
+        pushAiMessage("❌ Invalid JSON. Please paste valid JSON.");
+        return;
+      }
+
+      // Required fields from Risk Analysis
+      const required = ["risk_score", "risk_category", "priority", "attack_type", "summary"];
+      const missing = required.filter(f => parsed[f] === undefined);
+
+      if (missing.length > 0) {
+        pushAiMessage(
+          "⚠ Missing fields: " + missing.join(", ") +
+          ".\nRun Risk Analysis first, then paste its JSON here."
+        );
+        return;
+      }
+
+      pushAiMessage("📘 Generating CERT incident response playbook...");
+
+      try {
+        const res = await fetch(OLLAMA_API_URL, {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({
+            model: OLLAMA_MODEL_NAME,
+            messages: [
+              { role: "system", content: PLAYBOOK_SYSTEM_PROMPT },
+              { role: "user", content: JSON.stringify(parsed, null, 2) }
+            ],
+            stream: false
+          })
+        });
+
+        const data = await res.json();
+        const aiText =
+          data?.message?.content ||
+          data?.response ||
+          "❌ Failed to generate playbook.";
+
+        pushAiMessage(aiText);
+        
+        // Reset to normal chat mode
+        setIsPlaybookMode(false);
+        setTimeout(() => {
+          pushAiMessage("✅ Playbook generated! You can now ask me anything or start another quick action.");
+        }, 500);
+        
+      } catch (err) {
+        console.error("Playbook Error:", err);
+        pushAiMessage("❌ Error while generating playbook.");
+        setIsPlaybookMode(false);
+      }
+
       return;
     }
-
-    // Required fields from Risk Analysis
-    const required = ["risk_score", "risk_category", "priority", "attack_type", "summary"];
-    const missing = required.filter(f => parsed[f] === undefined);
-
-    if (missing.length > 0) {
-      pushAiMessage(
-        "⚠ Missing fields: " + missing.join(", ") +
-        ".\nRun Risk Analysis first, then paste its JSON here."
-      );
-      return;
-    }
-
-    pushAiMessage("📘 Generating CERT incident response playbook...");
-
-    try {
-      const res = await fetch(OLLAMA_API_URL, {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({
-          model: OLLAMA_MODEL_NAME,
-          messages: [
-            { role: "system", content: PLAYBOOK_SYSTEM_PROMPT },
-            { role: "user", content: JSON.stringify(parsed, null, 2) }
-          ],
-          stream: false
-        })
-      });
-
-      const data = await res.json();
-      const aiText =
-        data?.message?.content ||
-        data?.response ||
-        "❌ Failed to generate playbook.";
-
-      pushAiMessage(aiText);
-    } catch (err) {
-      console.error("Playbook Error:", err);
-      pushAiMessage("❌ Error while generating playbook.");
-    }
-
-    return; // do NOT continue to file report / risk / chat
-  }
-
 
     // FILE REPORT MODE
     if (isFileReportActive) {
@@ -464,6 +478,7 @@ const [isPlaybookMode, setIsPlaybookMode] = useState(false);
 
         if (!res.ok) {
           pushAiMessage(`❌ Server error: ${res.status}`);
+          setIsRiskAnalysisMode(false);
           return;
         }
 
@@ -472,6 +487,7 @@ const [isPlaybookMode, setIsPlaybookMode] = useState(false);
 
         if (!aiText.trim()) {
           pushAiMessage("❌ AI returned empty response.");
+          setIsRiskAnalysisMode(false);
           return;
         }
 
@@ -479,6 +495,7 @@ const [isPlaybookMode, setIsPlaybookMode] = useState(false);
         const jsonMatch = aiText.match(/\{[\s\S]*\}/);
         if (!jsonMatch) {
           pushAiMessage("❌ AI response does not contain valid JSON.\n\nRaw response:\n" + aiText.substring(0, 500));
+          setIsRiskAnalysisMode(false);
           return;
         }
 
@@ -489,15 +506,25 @@ const [isPlaybookMode, setIsPlaybookMode] = useState(false);
           const missing = required.filter((f) => !(f in validated));
           if (missing.length > 0) {
             pushAiMessage(`⚠️ Missing fields in response: ${missing.join(", ")}`);
+            setIsRiskAnalysisMode(false);
             return;
           }
           pushAiMessage(JSON.stringify(validated, null, 2));
+          
+          // Reset to normal chat mode
+          setIsRiskAnalysisMode(false);
+          setTimeout(() => {
+            pushAiMessage("✅ Risk analysis complete! You can now ask me anything or start another quick action.");
+          }, 500);
+          
         } catch (parseErr) {
           pushAiMessage("❌ Invalid JSON in response: " + parseErr.message);
+          setIsRiskAnalysisMode(false);
         }
       } catch (err) {
         console.error("Risk Analysis Error:", err);
         pushAiMessage(`❌ Connection failed:\n${err.message}`);
+        setIsRiskAnalysisMode(false);
       }
       return;
     }
@@ -526,10 +553,12 @@ const [isPlaybookMode, setIsPlaybookMode] = useState(false);
   /* ---------------- QUICK ACTIONS ---------------- */
   const handleQuickAction = (action) => {
     if (action === "File Report") {
+      // Reset all modes first
       setIsFileReportActive(true);
       setIsEvidenceStep(false);
       setFileReportStep(0);
       setIsRiskAnalysisMode(false);
+      setIsPlaybookMode(false);
 
       setFileReportData({
         name: "",
@@ -562,26 +591,29 @@ const [isPlaybookMode, setIsPlaybookMode] = useState(false);
     }
 
     if (action === "Risk Analysis") {
+      // Reset all modes first
       setIsRiskAnalysisMode(true);
       setIsFileReportActive(false);
       setIsEvidenceStep(false);
       setFileReportStep(0);
+      setIsPlaybookMode(false);
       pushAiMessage("🛡 Risk Analysis activated.\nPaste the JSON incident report and press Send.");
       return;
     }
     
-  if (action === "Playbooks") {
-    setIsPlaybookMode(true);
-    setIsRiskAnalysisMode(false);
-    setIsFileReportActive(false);
-    setIsEvidenceStep(false);
-    setFileReportStep(0);
+    if (action === "Playbooks") {
+      // Reset all modes first
+      setIsPlaybookMode(true);
+      setIsRiskAnalysisMode(false);
+      setIsFileReportActive(false);
+      setIsEvidenceStep(false);
+      setFileReportStep(0);
 
-    pushAiMessage(
-      "📘 Playbook mode activated.\nPlease paste the JSON that already contains risk_score, risk_category, priority, attack_type, and summary. Then press Send."
-    );
-    return;
-  }
+      pushAiMessage(
+        "📘 Playbook mode activated.\nPlease paste the JSON that already contains risk_score, risk_category, priority, attack_type, and summary. Then press Send."
+      );
+      return;
+    }
 
     // fallback
     pushAiMessage(`${action} feature not implemented yet.`);
