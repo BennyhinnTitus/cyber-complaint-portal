@@ -14,7 +14,7 @@ import Footer from "../components/Footer";
 
 /* ---------------- CONFIG ---------------- */
 const OLLAMA_API_URL = "http://localhost:11434/api/chat";
-const OLLAMA_MODEL_NAME = "phi3";
+const OLLAMA_MODEL_NAME = "gpt-oss:20b";
 
 const PRAISE_MESSAGES = ["Great, thank you!", "Excellent.", "Got it.", "Perfect, thanks.", "Nice."];
 
