@@ -14,7 +14,7 @@ import Footer from "../components/Footer";
 
 /* ---------------- CONFIG ---------------- */
 const OLLAMA_API_URL = "http://localhost:11434/api/chat";
-const OLLAMA_MODEL_NAME = "phi3";
+const OLLAMA_MODEL_NAME = "gpt-oss:20b";
 
 const PRAISE_MESSAGES = ["Great, thank you!", "Excellent.", "Got it.", "Perfect, thanks.", "Nice."];
 
@@ -51,6 +51,68 @@ Respond **ONLY in valid JSON** using exactly this schema:
 
 Never add text outside JSON.
 `.trim();
+const PLAYBOOK_SYSTEM_PROMPT = `
+You are a CERT (Computer Emergency Response Team) incident response expert.
+
+Input: A JSON object that ALREADY contains:
+- risk_score
+- risk_category
+- priority
+- attack_type
+- summary
+
+Your task:
+Generate a professional CERT incident response PLAYBOOK for this incident.
+
+Requirements:
+- The playbook must be understandable by non-technical users AND useful for security teams.
+- Use clear headings and bullet points.
+- Do NOT return JSON.
+- Do NOT explain what you are doing.
+- Only output the playbook.
+
+Format:
+
+🚨 CERT Incident Response Playbook — {attack_type}
+Priority: {priority} | Risk: {risk_category} ({risk_score}/100)
+
+🔍 Executive Summary (non-technical)
+• Simple explanation of what happened and impact
+
+📌 Affected Areas
+• Who or what might be impacted
+
+1️⃣ Detection & Validation
+• Steps to confirm the incident
+• Logs / evidence to review
+
+2️⃣ Containment
+• Immediate actions to limit damage
+• Short-term and long-term containment ideas
+
+3️⃣ Forensic Investigation
+• What to collect and analyze
+• Questions to answer
+
+4️⃣ Eradication & Remediation
+• How to remove the threat
+• How to close the hole used by the attacker
+
+5️⃣ Recovery & Validation
+• Steps to safely restore systems/users
+• Checks before saying "incident is over"
+
+6️⃣ Reporting / Legal / Compliance
+• Who should be informed
+• Possible reporting or documentation needs
+
+7️⃣ Lessons Learned & Prevention
+• How to avoid similar incidents in future
+• Training / policy / control improvements
+
+Use simple language where possible, but keep it professional.
+`.trim();
+
 
 /* ---------------- UTIL: simplify big scanner reports ---------------- */
 function simplifyScannerReport(report) {
@@ -121,6 +183,8 @@ function App() {
   const [fileReportStep, setFileReportStep] = useState(0);
   const [isEvidenceStep, setIsEvidenceStep] = useState(false);
   const [isRiskAnalysisMode, setIsRiskAnalysisMode] = useState(false);
+  // 👉 NEW: Playbook mode flag
+const [isPlaybookMode, setIsPlaybookMode] = useState(false);
 
   const [fileReportData, setFileReportData] = useState({
     name: "",
@@ -300,6 +364,63 @@ function App() {
     };
 
     setMessages((prev) => [...prev, userMessage]);
+      // --------------------------------------------------
+  // 📘 PLAYBOOK MODE (CERT-STYLE)
+  // --------------------------------------------------
+  if (isPlaybookMode) {
+    let parsed;
+
+    // Validate JSON
+    try {
+      parsed = JSON.parse(userText);
+    } catch {
+      pushAiMessage("❌ Invalid JSON. Please paste valid JSON.");
+      return;
+    }
+
+    // Required fields from Risk Analysis
+    const required = ["risk_score", "risk_category", "priority", "attack_type", "summary"];
+    const missing = required.filter(f => parsed[f] === undefined);
+
+    if (missing.length > 0) {
+      pushAiMessage(
+        "⚠ Missing fields: " + missing.join(", ") +
+        ".\nRun Risk Analysis first, then paste its JSON here."
+      );
+      return;
+    }
+
+    pushAiMessage("📘 Generating CERT incident response playbook...");
+
+    try {
+      const res = await fetch(OLLAMA_API_URL, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          model: OLLAMA_MODEL_NAME,
+          messages: [
+            { role: "system", content: PLAYBOOK_SYSTEM_PROMPT },
+            { role: "user", content: JSON.stringify(parsed, null, 2) }
+          ],
+          stream: false
+        })
+      });
+
+      const data = await res.json();
+      const aiText =
+        data?.message?.content ||
+        data?.response ||
+        "❌ Failed to generate playbook.";
+
+      pushAiMessage(aiText);
+    } catch (err) {
+      console.error("Playbook Error:", err);
+      pushAiMessage("❌ Error while generating playbook.");
+    }
+
+    return; // do NOT continue to file report / risk / chat
+  }
+
 
     // FILE REPORT MODE
     if (isFileReportActive) {
@@ -448,6 +569,19 @@ function App() {
       pushAiMessage("🛡 Risk Analysis activated.\nPaste the JSON incident report and press Send.");
       return;
     }
+    
+  if (action === "Playbooks") {
+    setIsPlaybookMode(true);
+    setIsRiskAnalysisMode(false);
+    setIsFileReportActive(false);
+    setIsEvidenceStep(false);
+    setFileReportStep(0);
+
+    pushAiMessage(
+      "📘 Playbook mode activated.\nPlease paste the JSON that already contains risk_score, risk_category, priority, attack_type, and summary. Then press Send."
+    );
+    return;
+  }
 
     // fallback
     pushAiMessage(`${action} feature not implemented yet.`);
