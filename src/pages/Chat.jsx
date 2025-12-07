@@ -54,63 +54,91 @@ Never add text outside JSON.
 const PLAYBOOK_SYSTEM_PROMPT = `
 You are a CERT (Computer Emergency Response Team) incident response expert.
 
-Input: A JSON object that ALREADY contains:
-- risk_score
-- risk_category
-- priority
-- attack_type
-- summary
+Input: A JSON object with risk_score, risk_category, priority, attack_type, and summary.
 
-Your task:
-Generate a professional CERT incident response PLAYBOOK for this incident.
-
-Requirements:
-- The playbook must be understandable by non-technical users AND useful for security teams.
-- Use clear headings and bullet points.
-- Do NOT return JSON.
-- Do NOT explain what you are doing.
-- Only output the playbook.
+Generate a CONCISE CERT incident response playbook in bullet-point format only.
 
 Format:
 
 🚨 CERT Incident Response Playbook — {attack_type}
 Priority: {priority} | Risk: {risk_category} ({risk_score}/100)
 
-🔍 Executive Summary (non-technical)
-• Simple explanation of what happened and impact
+📋 INCIDENT OVERVIEW
+• Brief description of the attack
+• Primary impact areas
+• Affected systems/users
 
-📌 Affected Areas
-• Who or what might be impacted
+🔍 DETECTION & VALIDATION
+• Indicators of compromise (IOCs)
+• Log sources to check
+• Validation steps
 
-1️⃣ Detection & Validation
-• Steps to confirm the incident
-• Logs / evidence to review
+🛡️ IMMEDIATE CONTAINMENT
+• Isolation actions (network/system)
+• Access restrictions
+• Communication protocols
 
-2️⃣ Containment
-• Immediate actions to limit damage
-• Short-term and long-term containment ideas
+🔬 INVESTIGATION
+• Evidence collection points
+• Forensic artifacts to preserve
+• Key questions to answer
 
-3️⃣ Forensic Investigation
-• What to collect and analyze
-• Questions to answer
+🧹 ERADICATION
+• Threat removal steps
+• Vulnerability patching
+• Security control updates
 
-4️⃣ Eradication & Remediation
-• How to remove the threat
-• How to close the hole used by the attacker
+♻️ RECOVERY
+• System restoration sequence
+• Validation checks
+• Monitoring requirements
 
-5️⃣ Recovery & Validation
-• Steps to safely restore systems/users
-• Checks before saying "incident is over"
+📢 REPORTING & COMPLIANCE
+• Internal notifications
+• External reporting (if required)
+• Documentation needs
 
-6️⃣ Reporting / Legal / Compliance
-• Who should be informed
-• Possible reporting or documentation needs
+🎯 PREVENTION
+• Security improvements
+• Policy updates
+• Training requirements
 
-7️⃣ Lessons Learned & Prevention
-• How to avoid similar incidents in future
-• Training / policy / control improvements
+Keep all points concise. Use technical terminology. Maximum 3-4 bullets per section.
+`.trim();
+const USER_PLAYBOOK_SYSTEM_PROMPT = `
+You are a friendly cybersecurity guide helping non-technical users.
 
-Use simple language where possible, but keep it professional.
+Input: A JSON object with risk_score, risk_category, priority, attack_type, and summary.
+
+Generate EXACTLY 10 simple action steps that anyone can understand and follow.
+
+Format:
+
+👤 User's Action Guide — {attack_type}
+Risk Level: {risk_category} | Priority: {priority}
+
+🤔 What Happened?
+[One simple sentence explaining the incident like you're talking to a friend]
+
+✅ YOUR 10-STEP ACTION PLAN:
+
+1. 🚨 [First immediate action - what to do RIGHT NOW]
+2. 🔌 [Second step - usually about disconnecting/stopping something]
+3. 📸 [Third step - about documenting/saving evidence]
+4. 👥 [Fourth step - who to inform]
+5. 🔒 [Fifth step - securing accounts/passwords]
+6. 📝 [Sixth step - what information to gather]
+7. ⏳ [Seventh step - what to monitor]
+8. 🛡️ [Eighth step - protection measure]
+9. 📞 [Ninth step - when to call for help]
+10. 💡 [Tenth step - prevention tip for future]
+
+⚠️ DON'T:
+• [One thing NOT to do]
+• [Second thing NOT to do]
+• [Third thing NOT to do]
+
+Use extremely simple language. Each step should be ONE clear action. No jargon. Use emojis. Be friendly and reassuring.
 `.trim();
 
 
@@ -397,10 +425,11 @@ const [isPlaybookMode, setIsPlaybookMode] = useState(false);
         return;
       }
 
-      pushAiMessage("📘 Generating CERT incident response playbook...");
+      pushAiMessage("📘 Generating CERT's Playbook (technical version)...");
 
       try {
-        const res = await fetch(OLLAMA_API_URL, {
+        // Generate CERT's Playbook (Technical)
+        const certRes = await fetch(OLLAMA_API_URL, {
           method: "POST",
           headers: { "Content-Type": "application/json" },
           body: JSON.stringify({
@@ -413,23 +442,47 @@ const [isPlaybookMode, setIsPlaybookMode] = useState(false);
           })
         });
 
-        const data = await res.json();
-        const aiText =
-          data?.message?.content ||
-          data?.response ||
-          "❌ Failed to generate playbook.";
+        const certData = await certRes.json();
+        const certPlaybook =
+          certData?.message?.content ||
+          certData?.response ||
+          "❌ Failed to generate CERT playbook.";
 
-        pushAiMessage(aiText);
+        pushAiMessage(certPlaybook);
+
+        // Now generate User's Playbook (Simplified)
+        pushAiMessage("👤 Generating User's Playbook (simplified version)...");
+
+        const userRes = await fetch(OLLAMA_API_URL, {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({
+            model: OLLAMA_MODEL_NAME,
+            messages: [
+              { role: "system", content: USER_PLAYBOOK_SYSTEM_PROMPT },
+              { role: "user", content: JSON.stringify(parsed, null, 2) }
+            ],
+            stream: false
+          })
+        });
+
+        const userData = await userRes.json();
+        const userPlaybook =
+          userData?.message?.content ||
+          userData?.response ||
+          "❌ Failed to generate User playbook.";
+
+        pushAiMessage(userPlaybook);
         
         // Reset to normal chat mode
         setIsPlaybookMode(false);
         setTimeout(() => {
-          pushAiMessage("✅ Playbook generated! You can now ask me anything or start another quick action.");
+          pushAiMessage("✅ Both playbooks generated! You can now ask me anything or start another quick action.");
         }, 500);
         
       } catch (err) {
         console.error("Playbook Error:", err);
-        pushAiMessage("❌ Error while generating playbook.");
+        pushAiMessage("❌ Error while generating playbooks.");
         setIsPlaybookMode(false);
       }
 
