@@ -51,6 +51,96 @@ Respond **ONLY in valid JSON** using exactly this schema:
 
 Never add text outside JSON.
 `.trim();
+const PLAYBOOK_SYSTEM_PROMPT = `
+You are a CERT (Computer Emergency Response Team) incident response expert.
+
+Input: A JSON object with risk_score, risk_category, priority, attack_type, and summary.
+
+Generate a CONCISE CERT incident response playbook in bullet-point format only.
+
+Format:
+
+🚨 CERT Incident Response Playbook — {attack_type}
+Priority: {priority} | Risk: {risk_category} ({risk_score}/100)
+
+📋 INCIDENT OVERVIEW
+• Brief description of the attack
+• Primary impact areas
+• Affected systems/users
+
+🔍 DETECTION & VALIDATION
+• Indicators of compromise (IOCs)
+• Log sources to check
+• Validation steps
+
+🛡️ IMMEDIATE CONTAINMENT
+• Isolation actions (network/system)
+• Access restrictions
+• Communication protocols
+
+🔬 INVESTIGATION
+• Evidence collection points
+• Forensic artifacts to preserve
+• Key questions to answer
+
+🧹 ERADICATION
+• Threat removal steps
+• Vulnerability patching
+• Security control updates
+
+♻️ RECOVERY
+• System restoration sequence
+• Validation checks
+• Monitoring requirements
+
+📢 REPORTING & COMPLIANCE
+• Internal notifications
+• External reporting (if required)
+• Documentation needs
+
+🎯 PREVENTION
+• Security improvements
+• Policy updates
+• Training requirements
+
+Keep all points concise. Use technical terminology. Maximum 3-4 bullets per section.
+`.trim();
+const USER_PLAYBOOK_SYSTEM_PROMPT = `
+You are a friendly cybersecurity guide helping non-technical users.
+
+Input: A JSON object with risk_score, risk_category, priority, attack_type, and summary.
+
+Generate EXACTLY 10 simple action steps that anyone can understand and follow.
+
+Format:
+
+👤 User's Action Guide — {attack_type}
+Risk Level: {risk_category} | Priority: {priority}
+
+🤔 What Happened?
+[One simple sentence explaining the incident like you're talking to a friend]
+
+✅ YOUR 10-STEP ACTION PLAN:
+
+1. 🚨 [First immediate action - what to do RIGHT NOW]
+2. 🔌 [Second step - usually about disconnecting/stopping something]
+3. 📸 [Third step - about documenting/saving evidence]
+4. 👥 [Fourth step - who to inform]
+5. 🔒 [Fifth step - securing accounts/passwords]
+6. 📝 [Sixth step - what information to gather]
+7. ⏳ [Seventh step - what to monitor]
+8. 🛡️ [Eighth step - protection measure]
+9. 📞 [Ninth step - when to call for help]
+10. 💡 [Tenth step - prevention tip for future]
+
+⚠️ DON'T:
+• [One thing NOT to do]
+• [Second thing NOT to do]
+• [Third thing NOT to do]
+
+Use extremely simple language. Each step should be ONE clear action. No jargon. Use emojis. Be friendly and reassuring.
+`.trim();
+
 
 /* ---------------- UTIL: simplify big scanner reports ---------------- */
 function simplifyScannerReport(report) {
@@ -121,6 +211,8 @@ function App() {
   const [fileReportStep, setFileReportStep] = useState(0);
   const [isEvidenceStep, setIsEvidenceStep] = useState(false);
   const [isRiskAnalysisMode, setIsRiskAnalysisMode] = useState(false);
+  // 👉 NEW: Playbook mode flag
+const [isPlaybookMode, setIsPlaybookMode] = useState(false);
 
   const [fileReportData, setFileReportData] = useState({
     name: "",
@@ -173,10 +265,16 @@ function App() {
       const finalPayload = { ...fileReportData };
       pushAiMessage(JSON.stringify(finalPayload, null, 2));
 
-      // reset
+      // Reset to normal chat mode
       setIsFileReportActive(false);
       setIsEvidenceStep(false);
       setFileReportStep(0);
+      
+      // Auto-switch to normal chat
+      setTimeout(() => {
+        pushAiMessage("✅ File report submitted successfully! You can now ask me anything or start another quick action.");
+      }, 500);
+      
       return;
     }
 
@@ -300,6 +398,96 @@ function App() {
     };
 
     setMessages((prev) => [...prev, userMessage]);
+    
+    // --------------------------------------------------
+    // 📘 PLAYBOOK MODE (CERT-STYLE)
+    // --------------------------------------------------
+    if (isPlaybookMode) {
+      let parsed;
+
+      // Validate JSON
+      try {
+        parsed = JSON.parse(userText);
+      } catch {
+        pushAiMessage("❌ Invalid JSON. Please paste valid JSON.");
+        return;
+      }
+
+      // Required fields from Risk Analysis
+      const required = ["risk_score", "risk_category", "priority", "attack_type", "summary"];
+      const missing = required.filter(f => parsed[f] === undefined);
+
+      if (missing.length > 0) {
+        pushAiMessage(
+          "⚠ Missing fields: " + missing.join(", ") +
+          ".\nRun Risk Analysis first, then paste its JSON here."
+        );
+        return;
+      }
+
+      pushAiMessage("📘 Generating CERT's Playbook (technical version)...");
+
+      try {
+        // Generate CERT's Playbook (Technical)
+        const certRes = await fetch(OLLAMA_API_URL, {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({
+            model: OLLAMA_MODEL_NAME,
+            messages: [
+              { role: "system", content: PLAYBOOK_SYSTEM_PROMPT },
+              { role: "user", content: JSON.stringify(parsed, null, 2) }
+            ],
+            stream: false
+          })
+        });
+
+        const certData = await certRes.json();
+        const certPlaybook =
+          certData?.message?.content ||
+          certData?.response ||
+          "❌ Failed to generate CERT playbook.";
+
+        pushAiMessage(certPlaybook);
+
+        // Now generate User's Playbook (Simplified)
+        pushAiMessage("👤 Generating User's Playbook (simplified version)...");
+
+        const userRes = await fetch(OLLAMA_API_URL, {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({
+            model: OLLAMA_MODEL_NAME,
+            messages: [
+              { role: "system", content: USER_PLAYBOOK_SYSTEM_PROMPT },
+              { role: "user", content: JSON.stringify(parsed, null, 2) }
+            ],
+            stream: false
+          })
+        });
+
+        const userData = await userRes.json();
+        const userPlaybook =
+          userData?.message?.content ||
+          userData?.response ||
+          "❌ Failed to generate User playbook.";
+
+        pushAiMessage(userPlaybook);
+        
+        // Reset to normal chat mode
+        setIsPlaybookMode(false);
+        setTimeout(() => {
+          pushAiMessage("✅ Both playbooks generated! You can now ask me anything or start another quick action.");
+        }, 500);
+        
+      } catch (err) {
+        console.error("Playbook Error:", err);
+        pushAiMessage("❌ Error while generating playbooks.");
+        setIsPlaybookMode(false);
+      }
+
+      return;
+    }
 
     // FILE REPORT MODE
     if (isFileReportActive) {
@@ -343,6 +531,7 @@ function App() {
 
         if (!res.ok) {
           pushAiMessage(`❌ Server error: ${res.status}`);
+          setIsRiskAnalysisMode(false);
           return;
         }
 
@@ -351,6 +540,7 @@ function App() {
 
         if (!aiText.trim()) {
           pushAiMessage("❌ AI returned empty response.");
+          setIsRiskAnalysisMode(false);
           return;
         }
 
@@ -358,6 +548,7 @@ function App() {
         const jsonMatch = aiText.match(/\{[\s\S]*\}/);
         if (!jsonMatch) {
           pushAiMessage("❌ AI response does not contain valid JSON.\n\nRaw response:\n" + aiText.substring(0, 500));
+          setIsRiskAnalysisMode(false);
           return;
         }
 
@@ -368,15 +559,25 @@ function App() {
           const missing = required.filter((f) => !(f in validated));
           if (missing.length > 0) {
             pushAiMessage(`⚠️ Missing fields in response: ${missing.join(", ")}`);
+            setIsRiskAnalysisMode(false);
             return;
           }
           pushAiMessage(JSON.stringify(validated, null, 2));
+          
+          // Reset to normal chat mode
+          setIsRiskAnalysisMode(false);
+          setTimeout(() => {
+            pushAiMessage("✅ Risk analysis complete! You can now ask me anything or start another quick action.");
+          }, 500);
+          
         } catch (parseErr) {
           pushAiMessage("❌ Invalid JSON in response: " + parseErr.message);
+          setIsRiskAnalysisMode(false);
         }
       } catch (err) {
         console.error("Risk Analysis Error:", err);
         pushAiMessage(`❌ Connection failed:\n${err.message}`);
+        setIsRiskAnalysisMode(false);
       }
       return;
     }
@@ -405,10 +606,12 @@ function App() {
   /* ---------------- QUICK ACTIONS ---------------- */
   const handleQuickAction = (action) => {
     if (action === "File Report") {
+      // Reset all modes first
       setIsFileReportActive(true);
       setIsEvidenceStep(false);
       setFileReportStep(0);
       setIsRiskAnalysisMode(false);
+      setIsPlaybookMode(false);
 
       setFileReportData({
         name: "",
@@ -441,11 +644,27 @@ function App() {
     }
 
     if (action === "Risk Analysis") {
+      // Reset all modes first
       setIsRiskAnalysisMode(true);
       setIsFileReportActive(false);
       setIsEvidenceStep(false);
       setFileReportStep(0);
+      setIsPlaybookMode(false);
       pushAiMessage("🛡 Risk Analysis activated.\nPaste the JSON incident report and press Send.");
+      return;
+    }
+    
+    if (action === "Playbooks") {
+      // Reset all modes first
+      setIsPlaybookMode(true);
+      setIsRiskAnalysisMode(false);
+      setIsFileReportActive(false);
+      setIsEvidenceStep(false);
+      setFileReportStep(0);
+
+      pushAiMessage(
+        "📘 Playbook mode activated.\nPlease paste the JSON that already contains risk_score, risk_category, priority, attack_type, and summary. Then press Send."
+      );
       return;
     }
 
