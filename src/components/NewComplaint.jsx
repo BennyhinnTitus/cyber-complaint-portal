@@ -1,5 +1,9 @@
 import { useState } from 'react';
 import { User, FileText, Upload, ChevronRight, ChevronLeft, AlertTriangle, CheckCircle } from 'lucide-react';
+import { validateFormInput, sanitizeHtml, validateDateFormat } from '../utils/validation';
+import { validateFiles, sanitizeFileName } from '../utils/fileUploadSecurity';
+import { logComplaintSubmission, logValidationFailure } from '../utils/auditLog';
+import { FILE_UPLOAD_CONFIG, VALIDATION_RULES } from '../utils/securityConfig';
 
 export function NewComplaint() {
   const [currentStep, setCurrentStep] = useState(1);
@@ -47,13 +51,6 @@ export function NewComplaint() {
     });
   };
 
-  const handleCheckboxChange = (e) => {
-    setFormData({
-      ...formData,
-      [e.target.name]: e.target.checked
-    });
-  };
-
   const handleStepClick = (stepNum) => {
     setCurrentStep(stepNum);
     const stepElement = document.getElementById(`step-${stepNum}`);
@@ -66,24 +63,38 @@ export function NewComplaint() {
     if (e.target.files) {
       const files = Array.from(e.target.files);
 
-      if (files.length > 5) {
-        alert('You can only upload up to 5 files.');
+      // Use secure file validation
+      const validation = validateFiles(files, {
+        maxFiles: FILE_UPLOAD_CONFIG.MAX_FILES_PER_UPLOAD,
+        maxTotalSize: FILE_UPLOAD_CONFIG.MAX_TOTAL_SIZE_BYTES
+      });
+
+      if (!validation.valid) {
+        // Log validation failures
+        validation.invalidFiles.forEach(invalid => {
+          invalid.errors.forEach(error => {
+            logValidationFailure('file_upload', error, invalid.file);
+          });
+        });
+
+        const errorMessages = validation.totalErrors.length > 0 
+          ? validation.totalErrors.join('\n')
+          : validation.invalidFiles.map(f => f.errors.join(', ')).join('\n');
+
+        alert(`File validation failed:\n\n${errorMessages}`);
         e.target.value = '';
         return;
       }
 
-      const totalSize = files.reduce((acc, file) => acc + file.size, 0);
-      const maxSize = 50 * 1024 * 1024;
-
-      if (totalSize > maxSize) {
-        alert('Total file size cannot exceed 50MB.');
+      if (validation.validFiles.length === 0) {
+        alert('No valid files to upload.');
         e.target.value = '';
         return;
       }
 
       setFormData({
         ...formData,
-        evidenceFiles: files
+        evidenceFiles: validation.validFiles
       });
     }
   };
@@ -101,36 +112,118 @@ export function NewComplaint() {
   };
 
   const isFormValid = () => {
-    return (
-      formData.fullName.trim() !== '' &&
-      formData.rank.trim() !== '' &&
-      formData.department.trim() !== '' &&
-      formData.complaintType.trim() !== '' &&
-      formData.incidentDate.trim() !== '' &&
-      formData.incidentTime.trim() !== '' &&
-      formData.description.trim() !== '' &&
-      formData.suspectedSource.trim() !== ''
-    );
+    // Enhanced validation with security checks
+    const errors = [];
+
+    // Validate full name
+    if (!formData.fullName.trim()) {
+      errors.push('Full name required');
+    } else {
+      const nameValidation = validateFormInput(formData.fullName, {
+        minLength: 3,
+        maxLength: 100,
+        required: true
+      });
+      if (!nameValidation.isValid) {
+        errors.push(...nameValidation.errors);
+      }
+    }
+
+    // Validate rank
+    if (!formData.rank.trim()) {
+      errors.push('Rank required');
+    }
+
+    // Validate department
+    if (!formData.department.trim()) {
+      errors.push('Department required');
+    }
+
+    // Validate complaint type
+    if (!formData.complaintType.trim()) {
+      errors.push('Complaint type required');
+    }
+
+    // Validate incident date
+    if (!formData.incidentDate.trim()) {
+      errors.push('Incident date required');
+    } else if (!validateDateFormat(formData.incidentDate)) {
+      errors.push('Invalid incident date');
+    }
+
+    // Validate incident time
+    if (!formData.incidentTime.trim()) {
+      errors.push('Incident time required');
+    } else if (!/^\d{2}:\d{2}$/.test(formData.incidentTime)) {
+      errors.push('Invalid time format (use HH:MM)');
+    }
+
+    // Validate description
+    if (!formData.description.trim()) {
+      errors.push('Description required');
+    } else {
+      const descriptionValidation = validateFormInput(formData.description, {
+        minLength: 20,
+        maxLength: 5000,
+        required: true
+      });
+      if (!descriptionValidation.isValid) {
+        errors.push(...descriptionValidation.errors);
+      }
+    }
+
+    // Validate suspected source
+    if (!formData.suspectedSource.trim()) {
+      errors.push('Suspected source required');
+    }
+
+    if (errors.length > 0) {
+      errors.forEach(error => {
+        logValidationFailure('complaint_form', error);
+      });
+      return false;
+    }
+
+    return true;
   };
 
   const handleSubmit = () => {
     if (!isFormValid()) {
-      alert('Please fill in all required fields before submitting.');
-      return;
+      return; // Errors already logged in isFormValid()
     }
 
-    const fileNames = formData.evidenceFiles.map((f) => f.name);
-
-    const complaintData = {
-      ...formData,
-      evidenceFiles: fileNames
+    // Sanitize form data before submission
+    const sanitizedFormData = {
+      fullName: sanitizeHtml(formData.fullName),
+      rank: sanitizeHtml(formData.rank),
+      department: sanitizeHtml(formData.department),
+      location: sanitizeHtml(formData.location),
+      complaintType: formData.complaintType,
+      incidentDate: formData.incidentDate,
+      incidentTime: formData.incidentTime,
+      description: sanitizeHtml(formData.description),
+      suspectedSource: sanitizeHtml(formData.suspectedSource),
+      confidentiality: formData.confidentiality,
+      notifyCommandingOfficer: formData.notifyCommandingOfficer,
+      familyMemberComplaint: formData.familyMemberComplaint
     };
 
-    console.log('Form submitted:', complaintData);
-    alert('Complaint submitted successfully!');
+    // Only store file names, not actual file objects
+    const fileNames = formData.evidenceFiles.map((f) => sanitizeFileName(f.name));
+
+    const complaintData = {
+      ...sanitizedFormData,
+      evidenceFiles: fileNames,
+      submittedAt: new Date().toISOString()
+    };
+
+    // Log complaint submission for audit trail
+    logComplaintSubmission(`COM-${Date.now()}`, 'USER_ID', formData.complaintType);
+
+    // Show success without exposing details
+    alert('Complaint submitted successfully! You will receive a confirmation email shortly.');
 
     window.dispatchEvent(new CustomEvent('add-complaint', { detail: complaintData }));
-
     window.dispatchEvent(new CustomEvent('navigate', { detail: 'manage-complaints' }));
   };
 
