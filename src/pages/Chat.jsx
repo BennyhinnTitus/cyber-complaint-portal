@@ -14,6 +14,8 @@ import Footer from "../components/Footer";
 
 /* ---------------- CONFIG ---------------- */
 const OLLAMA_API_URL = "http://localhost:11434/api/chat";
+
+
 const OLLAMA_MODEL_NAME = "phi3";
 
 const PRAISE_MESSAGES = ["Great, thank you!", "Excellent.", "Got it.", "Perfect, thanks.", "Nice."];
@@ -194,6 +196,17 @@ const FILE_REPORT_FIELDS = [
   },
 ];
 
+/* ---------------- UTIL: Download text file ---------------- */
+function downloadTextFile(content, filename) {
+  const element = document.createElement("a");
+  const file = new Blob([content], { type: "text/plain" });
+  element.href = URL.createObjectURL(file);
+  element.download = filename;
+  document.body.appendChild(element);
+  element.click();
+  document.body.removeChild(element);
+}
+
 /* =================== APP COMPONENT =================== */
 function App() {
   /* ---------------- STATE ---------------- */
@@ -212,7 +225,10 @@ function App() {
   const [isEvidenceStep, setIsEvidenceStep] = useState(false);
   const [isRiskAnalysisMode, setIsRiskAnalysisMode] = useState(false);
   // 👉 NEW: Playbook mode flag
-const [isPlaybookMode, setIsPlaybookMode] = useState(false);
+  const [isPlaybookMode, setIsPlaybookMode] = useState(false);
+  // 👉 NEW: Track latest user playbook for download
+  const [latestUserPlaybook, setLatestUserPlaybook] = useState(null);
+  const [latestAttackType, setLatestAttackType] = useState("");
 
   const [fileReportData, setFileReportData] = useState({
     name: "",
@@ -400,7 +416,7 @@ const [isPlaybookMode, setIsPlaybookMode] = useState(false);
     setMessages((prev) => [...prev, userMessage]);
     
     // --------------------------------------------------
-    // 📘 PLAYBOOK MODE (CERT-STYLE)
+    // 📘 PLAYBOOK MODE (BOTH CERT & USER)
     // --------------------------------------------------
     if (isPlaybookMode) {
       let parsed;
@@ -472,7 +488,21 @@ const [isPlaybookMode, setIsPlaybookMode] = useState(false);
           userData?.response ||
           "❌ Failed to generate User playbook.";
 
+        // 👉 SAVE user playbook for download
+        setLatestUserPlaybook(userPlaybook);
+        setLatestAttackType(parsed.attack_type || "incident");
+
         pushAiMessage(userPlaybook);
+        
+        // Add download button message
+        const downloadMsg = {
+          id: `${Date.now()}-download`,
+          text: "📥 Download User Playbook",
+          sender: "ai",
+          timestamp: new Date().toLocaleTimeString("en-US", { hour: "2-digit", minute: "2-digit" }),
+          isDownloadButton: true
+        };
+        setMessages((prev) => [...prev, downloadMsg]);
         
         // Reset to normal chat mode
         setIsPlaybookMode(false);
@@ -672,6 +702,13 @@ const [isPlaybookMode, setIsPlaybookMode] = useState(false);
     pushAiMessage(`${action} feature not implemented yet.`);
   };
 
+  /* ---------------- DOWNLOAD PLAYBOOK ---------------- */
+  const handleDownloadPlaybook = () => {
+    if (!latestUserPlaybook) return;
+    const filename = `user-playbook-${latestAttackType}-${new Date().getTime()}.txt`;
+    downloadTextFile(latestUserPlaybook, filename);
+  };
+
   /* ---------------- WHICH FIELD KEY IS CURRENT ---------------- */
   const currentFieldKey = isFileReportActive && !isEvidenceStep ? FILE_REPORT_FIELDS[fileReportStep]?.key : undefined;
 
@@ -718,6 +755,21 @@ const [isPlaybookMode, setIsPlaybookMode] = useState(false);
                 onQuickAnswer={handleFieldSelection} // support both callback names
               />
             ))}
+            
+            {/* 👉 Download Button for User Playbook */}
+            {latestUserPlaybook && (
+              <div className="flex justify-center mt-4">
+                <button
+                  onClick={handleDownloadPlaybook}
+                  className="bg-gradient-to-r from-green-500 to-green-600 hover:from-green-600 hover:to-green-700 text-white font-bold py-2 px-6 rounded-lg shadow-lg transition-all duration-200 flex items-center gap-2"
+                >
+                  <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-4l-4 4m0 0l-4-4m4 4V4" />
+                  </svg>
+                  Download User Playbook
+                </button>
+              </div>
+            )}
           </div>
 
           {/* QUICK ACTIONS */}
