@@ -54,63 +54,91 @@ Never add text outside JSON.
 const PLAYBOOK_SYSTEM_PROMPT = `
 You are a CERT (Computer Emergency Response Team) incident response expert.
 
-Input: A JSON object that ALREADY contains:
-- risk_score
-- risk_category
-- priority
-- attack_type
-- summary
+Input: A JSON object with risk_score, risk_category, priority, attack_type, and summary.
 
-Your task:
-Generate a professional CERT incident response PLAYBOOK for this incident.
-
-Requirements:
-- The playbook must be understandable by non-technical users AND useful for security teams.
-- Use clear headings and bullet points.
-- Do NOT return JSON.
-- Do NOT explain what you are doing.
-- Only output the playbook.
+Generate a CONCISE CERT incident response playbook in bullet-point format only.
 
 Format:
 
 🚨 CERT Incident Response Playbook — {attack_type}
 Priority: {priority} | Risk: {risk_category} ({risk_score}/100)
 
-🔍 Executive Summary (non-technical)
-• Simple explanation of what happened and impact
+📋 INCIDENT OVERVIEW
+• Brief description of the attack
+• Primary impact areas
+• Affected systems/users
 
-📌 Affected Areas
-• Who or what might be impacted
+🔍 DETECTION & VALIDATION
+• Indicators of compromise (IOCs)
+• Log sources to check
+• Validation steps
 
-1️⃣ Detection & Validation
-• Steps to confirm the incident
-• Logs / evidence to review
+🛡️ IMMEDIATE CONTAINMENT
+• Isolation actions (network/system)
+• Access restrictions
+• Communication protocols
 
-2️⃣ Containment
-• Immediate actions to limit damage
-• Short-term and long-term containment ideas
+🔬 INVESTIGATION
+• Evidence collection points
+• Forensic artifacts to preserve
+• Key questions to answer
 
-3️⃣ Forensic Investigation
-• What to collect and analyze
-• Questions to answer
+🧹 ERADICATION
+• Threat removal steps
+• Vulnerability patching
+• Security control updates
 
-4️⃣ Eradication & Remediation
-• How to remove the threat
-• How to close the hole used by the attacker
+♻️ RECOVERY
+• System restoration sequence
+• Validation checks
+• Monitoring requirements
 
-5️⃣ Recovery & Validation
-• Steps to safely restore systems/users
-• Checks before saying "incident is over"
+📢 REPORTING & COMPLIANCE
+• Internal notifications
+• External reporting (if required)
+• Documentation needs
 
-6️⃣ Reporting / Legal / Compliance
-• Who should be informed
-• Possible reporting or documentation needs
+🎯 PREVENTION
+• Security improvements
+• Policy updates
+• Training requirements
 
-7️⃣ Lessons Learned & Prevention
-• How to avoid similar incidents in future
-• Training / policy / control improvements
+Keep all points concise. Use technical terminology. Maximum 3-4 bullets per section.
+`.trim();
+const USER_PLAYBOOK_SYSTEM_PROMPT = `
+You are a friendly cybersecurity guide helping non-technical users.
 
-Use simple language where possible, but keep it professional.
+Input: A JSON object with risk_score, risk_category, priority, attack_type, and summary.
+
+Generate EXACTLY 10 simple action steps that anyone can understand and follow.
+
+Format:
+
+👤 User's Action Guide — {attack_type}
+Risk Level: {risk_category} | Priority: {priority}
+
+🤔 What Happened?
+[One simple sentence explaining the incident like you're talking to a friend]
+
+✅ YOUR 10-STEP ACTION PLAN:
+
+1. 🚨 [First immediate action - what to do RIGHT NOW]
+2. 🔌 [Second step - usually about disconnecting/stopping something]
+3. 📸 [Third step - about documenting/saving evidence]
+4. 👥 [Fourth step - who to inform]
+5. 🔒 [Fifth step - securing accounts/passwords]
+6. 📝 [Sixth step - what information to gather]
+7. ⏳ [Seventh step - what to monitor]
+8. 🛡️ [Eighth step - protection measure]
+9. 📞 [Ninth step - when to call for help]
+10. 💡 [Tenth step - prevention tip for future]
+
+⚠️ DON'T:
+• [One thing NOT to do]
+• [Second thing NOT to do]
+• [Third thing NOT to do]
+
+Use extremely simple language. Each step should be ONE clear action. No jargon. Use emojis. Be friendly and reassuring.
 `.trim();
 
 
@@ -237,10 +265,16 @@ const [isPlaybookMode, setIsPlaybookMode] = useState(false);
       const finalPayload = { ...fileReportData };
       pushAiMessage(JSON.stringify(finalPayload, null, 2));
 
-      // reset
+      // Reset to normal chat mode
       setIsFileReportActive(false);
       setIsEvidenceStep(false);
       setFileReportStep(0);
+      
+      // Auto-switch to normal chat
+      setTimeout(() => {
+        pushAiMessage("✅ File report submitted successfully! You can now ask me anything or start another quick action.");
+      }, 500);
+      
       return;
     }
 
@@ -364,63 +398,96 @@ const [isPlaybookMode, setIsPlaybookMode] = useState(false);
     };
 
     setMessages((prev) => [...prev, userMessage]);
-      // --------------------------------------------------
-  // 📘 PLAYBOOK MODE (CERT-STYLE)
-  // --------------------------------------------------
-  if (isPlaybookMode) {
-    let parsed;
+    
+    // --------------------------------------------------
+    // 📘 PLAYBOOK MODE (CERT-STYLE)
+    // --------------------------------------------------
+    if (isPlaybookMode) {
+      let parsed;
 
-    // Validate JSON
-    try {
-      parsed = JSON.parse(userText);
-    } catch {
-      pushAiMessage("❌ Invalid JSON. Please paste valid JSON.");
+      // Validate JSON
+      try {
+        parsed = JSON.parse(userText);
+      } catch {
+        pushAiMessage("❌ Invalid JSON. Please paste valid JSON.");
+        return;
+      }
+
+      // Required fields from Risk Analysis
+      const required = ["risk_score", "risk_category", "priority", "attack_type", "summary"];
+      const missing = required.filter(f => parsed[f] === undefined);
+
+      if (missing.length > 0) {
+        pushAiMessage(
+          "⚠ Missing fields: " + missing.join(", ") +
+          ".\nRun Risk Analysis first, then paste its JSON here."
+        );
+        return;
+      }
+
+      pushAiMessage("📘 Generating CERT's Playbook (technical version)...");
+
+      try {
+        // Generate CERT's Playbook (Technical)
+        const certRes = await fetch(OLLAMA_API_URL, {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({
+            model: OLLAMA_MODEL_NAME,
+            messages: [
+              { role: "system", content: PLAYBOOK_SYSTEM_PROMPT },
+              { role: "user", content: JSON.stringify(parsed, null, 2) }
+            ],
+            stream: false
+          })
+        });
+
+        const certData = await certRes.json();
+        const certPlaybook =
+          certData?.message?.content ||
+          certData?.response ||
+          "❌ Failed to generate CERT playbook.";
+
+        pushAiMessage(certPlaybook);
+
+        // Now generate User's Playbook (Simplified)
+        pushAiMessage("👤 Generating User's Playbook (simplified version)...");
+
+        const userRes = await fetch(OLLAMA_API_URL, {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({
+            model: OLLAMA_MODEL_NAME,
+            messages: [
+              { role: "system", content: USER_PLAYBOOK_SYSTEM_PROMPT },
+              { role: "user", content: JSON.stringify(parsed, null, 2) }
+            ],
+            stream: false
+          })
+        });
+
+        const userData = await userRes.json();
+        const userPlaybook =
+          userData?.message?.content ||
+          userData?.response ||
+          "❌ Failed to generate User playbook.";
+
+        pushAiMessage(userPlaybook);
+        
+        // Reset to normal chat mode
+        setIsPlaybookMode(false);
+        setTimeout(() => {
+          pushAiMessage("✅ Both playbooks generated! You can now ask me anything or start another quick action.");
+        }, 500);
+        
+      } catch (err) {
+        console.error("Playbook Error:", err);
+        pushAiMessage("❌ Error while generating playbooks.");
+        setIsPlaybookMode(false);
+      }
+
       return;
     }
-
-    // Required fields from Risk Analysis
-    const required = ["risk_score", "risk_category", "priority", "attack_type", "summary"];
-    const missing = required.filter(f => parsed[f] === undefined);
-
-    if (missing.length > 0) {
-      pushAiMessage(
-        "⚠ Missing fields: " + missing.join(", ") +
-        ".\nRun Risk Analysis first, then paste its JSON here."
-      );
-      return;
-    }
-
-    pushAiMessage("📘 Generating CERT incident response playbook...");
-
-    try {
-      const res = await fetch(OLLAMA_API_URL, {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({
-          model: OLLAMA_MODEL_NAME,
-          messages: [
-            { role: "system", content: PLAYBOOK_SYSTEM_PROMPT },
-            { role: "user", content: JSON.stringify(parsed, null, 2) }
-          ],
-          stream: false
-        })
-      });
-
-      const data = await res.json();
-      const aiText =
-        data?.message?.content ||
-        data?.response ||
-        "❌ Failed to generate playbook.";
-
-      pushAiMessage(aiText);
-    } catch (err) {
-      console.error("Playbook Error:", err);
-      pushAiMessage("❌ Error while generating playbook.");
-    }
-
-    return; // do NOT continue to file report / risk / chat
-  }
-
 
     // FILE REPORT MODE
     if (isFileReportActive) {
@@ -464,6 +531,7 @@ const [isPlaybookMode, setIsPlaybookMode] = useState(false);
 
         if (!res.ok) {
           pushAiMessage(`❌ Server error: ${res.status}`);
+          setIsRiskAnalysisMode(false);
           return;
         }
 
@@ -472,6 +540,7 @@ const [isPlaybookMode, setIsPlaybookMode] = useState(false);
 
         if (!aiText.trim()) {
           pushAiMessage("❌ AI returned empty response.");
+          setIsRiskAnalysisMode(false);
           return;
         }
 
@@ -479,6 +548,7 @@ const [isPlaybookMode, setIsPlaybookMode] = useState(false);
         const jsonMatch = aiText.match(/\{[\s\S]*\}/);
         if (!jsonMatch) {
           pushAiMessage("❌ AI response does not contain valid JSON.\n\nRaw response:\n" + aiText.substring(0, 500));
+          setIsRiskAnalysisMode(false);
           return;
         }
 
@@ -489,15 +559,25 @@ const [isPlaybookMode, setIsPlaybookMode] = useState(false);
           const missing = required.filter((f) => !(f in validated));
           if (missing.length > 0) {
             pushAiMessage(`⚠️ Missing fields in response: ${missing.join(", ")}`);
+            setIsRiskAnalysisMode(false);
             return;
           }
           pushAiMessage(JSON.stringify(validated, null, 2));
+          
+          // Reset to normal chat mode
+          setIsRiskAnalysisMode(false);
+          setTimeout(() => {
+            pushAiMessage("✅ Risk analysis complete! You can now ask me anything or start another quick action.");
+          }, 500);
+          
         } catch (parseErr) {
           pushAiMessage("❌ Invalid JSON in response: " + parseErr.message);
+          setIsRiskAnalysisMode(false);
         }
       } catch (err) {
         console.error("Risk Analysis Error:", err);
         pushAiMessage(`❌ Connection failed:\n${err.message}`);
+        setIsRiskAnalysisMode(false);
       }
       return;
     }
@@ -526,10 +606,12 @@ const [isPlaybookMode, setIsPlaybookMode] = useState(false);
   /* ---------------- QUICK ACTIONS ---------------- */
   const handleQuickAction = (action) => {
     if (action === "File Report") {
+      // Reset all modes first
       setIsFileReportActive(true);
       setIsEvidenceStep(false);
       setFileReportStep(0);
       setIsRiskAnalysisMode(false);
+      setIsPlaybookMode(false);
 
       setFileReportData({
         name: "",
@@ -562,26 +644,29 @@ const [isPlaybookMode, setIsPlaybookMode] = useState(false);
     }
 
     if (action === "Risk Analysis") {
+      // Reset all modes first
       setIsRiskAnalysisMode(true);
       setIsFileReportActive(false);
       setIsEvidenceStep(false);
       setFileReportStep(0);
+      setIsPlaybookMode(false);
       pushAiMessage("🛡 Risk Analysis activated.\nPaste the JSON incident report and press Send.");
       return;
     }
     
-  if (action === "Playbooks") {
-    setIsPlaybookMode(true);
-    setIsRiskAnalysisMode(false);
-    setIsFileReportActive(false);
-    setIsEvidenceStep(false);
-    setFileReportStep(0);
+    if (action === "Playbooks") {
+      // Reset all modes first
+      setIsPlaybookMode(true);
+      setIsRiskAnalysisMode(false);
+      setIsFileReportActive(false);
+      setIsEvidenceStep(false);
+      setFileReportStep(0);
 
-    pushAiMessage(
-      "📘 Playbook mode activated.\nPlease paste the JSON that already contains risk_score, risk_category, priority, attack_type, and summary. Then press Send."
-    );
-    return;
-  }
+      pushAiMessage(
+        "📘 Playbook mode activated.\nPlease paste the JSON that already contains risk_score, risk_category, priority, attack_type, and summary. Then press Send."
+      );
+      return;
+    }
 
     // fallback
     pushAiMessage(`${action} feature not implemented yet.`);
