@@ -13,8 +13,7 @@ import Footer from "../components/Footer";
  */
 
 /* ---------------- CONFIG ---------------- */
-const OLLAMA_API_URL = "http://localhost:11434/api/chat";
-
+const OLLAMA_API_URL = "/api/chat";
 
 const OLLAMA_MODEL_NAME = "phi3";
 
