@@ -1,5 +1,7 @@
 import { useState } from 'react';
 import { ArrowLeft, Clock, CheckCircle, Search, Filter } from 'lucide-react';
+import { useNavigate } from "react-router-dom";
+
 
 const complaintTypeLabels = {
   unknown: 'Unknown',
@@ -16,6 +18,7 @@ const complaintTypeLabels = {
 };
 
 export function ManageComplaints() {
+  const navigate = useNavigate();
   const complaints = [
     {
       id: '#COM-001234',
@@ -193,12 +196,20 @@ export function ManageComplaints() {
   return (
     <div className="p-4 lg:p-8">
       <div className="mb-8">
-        <div className="flex items-center justify-between mb-4">
-          <div>
-            <h1 className="text-blue-600 mb-2">Manage Complaints</h1>
-            <p className="text-gray-600">Track and manage cyber complaints</p>
-          </div>
-        </div>
+      <div className="flex items-center justify-between mb-4">
+  <div>
+    <h1 className="text-blue-600 mb-2">Manage Complaints</h1>
+    <p className="text-gray-600">Track and manage cyber complaints</p>
+  </div>
+
+  <button
+    onClick={() => navigate("/new-complaint")}
+    className="px-6 py-2 bg-blue-600 text-white rounded-lg shadow hover:bg-blue-700 transition-all"
+  >
+    + File a Complaint
+  </button>
+</div>
+
 
         <div className="flex gap-2 border-b border-gray-200 mt-6">
           <button

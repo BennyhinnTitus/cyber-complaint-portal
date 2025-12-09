@@ -324,6 +324,8 @@ export function NewComplaint() {
                   <option value="sergeant">Sergeant</option>
                   <option value="lieutenant">Lieutenant</option>
                   <option value="captain">Captain</option>
+                  <option value="retired officer">Retired Officer</option>
+                  <option value="dependent">Dependent</option>
                 </select>
               </div>
 
