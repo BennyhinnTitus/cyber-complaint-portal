@@ -844,52 +844,53 @@ return;
   return (
     <div className="min-h-screen bg-white flex flex-col">
       {/* HEADER */}
-      <header className="border-b border-gray-100 py-6 px-6">
-        <div className="max-w-6xl mx-auto">
-          <h1 className="text-3xl font-bold text-blue-600 mb-1">AI Chatbot</h1>
-          <p className="text-gray-500 text-sm">Ask me anything</p>
+      <header className="border-b border-gray-100 py-3 sm:py-4 md:py-6 px-3 sm:px-4 md:px-6">
+        <div className="max-w-7xl mx-auto">
+          <h1 className="text-xl sm:text-2xl md:text-3xl font-bold text-blue-600 mb-0.5 sm:mb-1">AI Chatbot</h1>
+          <p className="text-gray-500 text-xs sm:text-sm">Ask me anything</p>
         </div>
       </header>
 
       {/* MAIN CHAT AREA - FLEX GROW */}
-      <main className="flex-1 flex flex-col max-w-6xl w-full mx-auto overflow-hidden">
+      <main className="flex-1 flex flex-col w-full mx-auto overflow-hidden">
         <div
           ref={chatContainerRef}
-          className="flex-1 px-6 py-8 space-y-6 overflow-y-scroll"
-          style={{ maxHeight: "calc(100vh - 210px)" }}
+          className="flex-1 px-3 sm:px-4 md:px-6 py-4 sm:py-6 md:py-8 space-y-3 sm:space-y-4 md:space-y-6 overflow-y-scroll"
+          style={{ maxHeight: "calc(100vh - 250px)" }}
         >
           {messages.map((message) => (
-            <div key={message.id} className={`flex ${message.sender === "user" ? "justify-end" : "justify-start"}`}>
+            <div key={message.id} className={`flex ${message.sender === "user" ? "justify-end" : "justify-start"} w-full`}>
               {message.isDownloadButton ? (
                 <button
                   onClick={handleDownloadPlaybook}
-                  className="flex gap-2 items-center bg-blue-500 hover:bg-blue-600 text-white rounded-lg px-4 py-2 text-sm font-medium transition-colors"
+                  className="flex gap-1.5 sm:gap-2 items-center bg-blue-500 hover:bg-blue-600 text-white rounded-lg px-3 sm:px-4 py-1.5 sm:py-2 text-xs sm:text-sm font-medium transition-colors"
                 >
-                  <FileText className="w-4 h-4" />
-                  {message.text}
+                  <FileText className="w-3 sm:w-4 h-3 sm:h-4" />
+                  <span className="hidden sm:inline">{message.text}</span>
+                  <span className="sm:hidden">Download</span>
                 </button>
               ) : message.sender === "ai" ? (
-                <div className="flex gap-3 max-w-2xl">
-                  <div className="flex-shrink-0 w-8 h-8 rounded-lg bg-blue-100 flex items-center justify-center">
-                    <Shield className="w-5 h-5 text-blue-600" />
+                <div className="flex gap-2 sm:gap-3 max-w-xs sm:max-w-md md:max-w-2xl lg:max-w-3xl">
+                  <div className="flex-shrink-0 w-6 sm:w-8 h-6 sm:h-8 rounded-lg bg-blue-100 flex items-center justify-center">
+                    <Shield className="w-4 sm:w-5 h-4 sm:h-5 text-blue-600" />
                   </div>
-                  <div className="bg-gray-100 rounded-2xl px-4 py-3 text-gray-700 text-sm leading-relaxed relative whitespace-pre-wrap">
+                  <div className="bg-gray-100 rounded-2xl px-3 sm:px-4 py-2 sm:py-3 text-gray-700 text-xs sm:text-sm leading-relaxed relative whitespace-pre-wrap break-words">
                     {message.text}
-                    <div className="text-[10px] text-gray-500 mt-1 text-right">
+                    <div className="text-[8px] sm:text-[10px] text-gray-500 mt-1 text-right">
                       {message.timestamp}
                     </div>
                   </div>
                 </div>
               ) : (
-                <div className="flex gap-2 max-w-2xl items-end">
-                  <div className="bg-blue-500 text-white rounded-2xl px-4 py-3 text-sm font-medium leading-relaxed break-words max-w-xl relative whitespace-pre-wrap">
+                <div className="flex gap-1.5 sm:gap-2 max-w-xs sm:max-w-md md:max-w-2xl lg:max-w-3xl items-end">
+                  <div className="bg-blue-500 text-white rounded-2xl px-3 sm:px-4 py-2 sm:py-3 text-xs sm:text-sm font-medium leading-relaxed break-words relative whitespace-pre-wrap">
                     {message.text}
-                    <div className="text-[10px] text-blue-200 mt-1 text-right">
+                    <div className="text-[8px] sm:text-[10px] text-blue-200 mt-1 text-right">
                       {message.timestamp}
                     </div>
                   </div>
-                  <div className="w-8 h-8 rounded-full bg-blue-500 flex items-center justify-center flex-shrink-0">
-                    <span className="text-white text-sm font-semibold">👤</span>
+                  <div className="w-6 sm:w-8 h-6 sm:h-8 rounded-full bg-blue-500 flex items-center justify-center flex-shrink-0">
+                    <span className="text-white text-xs sm:text-sm font-semibold">👤</span>
                   </div>
                 </div>
               )}
@@ -901,10 +902,10 @@ return;
       {/* QUICK ACTIONS SECTION - FIXED */}
       <div className="border-t border-gray-100 bg-white">
         <div
-          className="max-w-6xl mx-auto px-6 py-4 cursor-pointer flex items-center justify-between hover:bg-gray-50 transition-colors"
+          className="max-w-7xl mx-auto px-3 sm:px-4 md:px-6 py-2 sm:py-3 md:py-4 cursor-pointer flex items-center justify-between hover:bg-gray-50 transition-colors"
           onClick={() => setQuickActionsOpen(!quickActionsOpen)}
         >
-          <h3 className="text-gray-600 text-xs font-bold uppercase tracking-wide">Quick Actions</h3>
+          <h3 className="text-gray-600 text-[10px] sm:text-xs md:text-xs font-bold uppercase tracking-wide">Quick Actions</h3>
           {quickActionsOpen ? (
             <ChevronUp className="w-4 h-4 text-gray-400" />
           ) : (
@@ -913,35 +914,35 @@ return;
         </div>
 
         {quickActionsOpen && (
-          <div className="max-w-6xl mx-auto px-6 pb-6 pt-2 border-b border-gray-100">
-            <div className="grid grid-cols-4 gap-6">
+          <div className="max-w-7xl mx-auto px-3 sm:px-4 md:px-6 pb-3 sm:pb-4 md:pb-6 pt-2 border-b border-gray-100">
+            <div className="grid grid-cols-2 sm:grid-cols-4 gap-2 sm:gap-4 md:gap-6">
               <button
                 onClick={() => handleQuickAction("File Report")}
-                className="flex flex-col items-center gap-2 p-3 rounded-lg transition-colors group hover:bg-gray-100"
+                className="flex flex-col items-center gap-1.5 sm:gap-2 p-2 sm:p-3 rounded-lg transition-colors group hover:bg-gray-100"
               >
-                <FileText className="w-6 h-6 text-blue-600 group-hover:text-blue-700" />
-                <span className="text-sm font-medium text-gray-700">File Report</span>
+                <FileText className="w-5 sm:w-6 h-5 sm:h-6 text-blue-600 group-hover:text-blue-700" />
+                <span className="text-xs sm:text-sm font-medium text-gray-700 text-center line-clamp-2">File Report</span>
               </button>
               <button
                 onClick={() => handleQuickAction("Check Status")}
-                className="flex flex-col items-center gap-2 p-3 rounded-lg transition-colors group hover:bg-gray-100"
+                className="flex flex-col items-center gap-1.5 sm:gap-2 p-2 sm:p-3 rounded-lg transition-colors group hover:bg-gray-100"
               >
-                <Activity className="w-6 h-6 text-blue-600 group-hover:text-blue-700" />
-                <span className="text-sm font-medium text-gray-700">Check Status</span>
+                <Activity className="w-5 sm:w-6 h-5 sm:h-6 text-blue-600 group-hover:text-blue-700" />
+                <span className="text-xs sm:text-sm font-medium text-gray-700 text-center line-clamp-2">Check Status</span>
               </button>
               <button
                 onClick={() => handleQuickAction("Risk Analysis")}
-                className="flex flex-col items-center gap-2 p-3 rounded-lg transition-colors group hover:bg-gray-100"
+                className="flex flex-col items-center gap-1.5 sm:gap-2 p-2 sm:p-3 rounded-lg transition-colors group hover:bg-gray-100"
               >
-                <AlertTriangle className="w-6 h-6 text-blue-600 group-hover:text-blue-700" />
-                <span className="text-sm font-medium text-gray-700">Risk Analysis</span>
+                <AlertTriangle className="w-5 sm:w-6 h-5 sm:h-6 text-blue-600 group-hover:text-blue-700" />
+                <span className="text-xs sm:text-sm font-medium text-gray-700 text-center line-clamp-2">Risk Analysis</span>
               </button>
               <button
                 onClick={() => handleQuickAction("Playbooks")}
-                className="flex flex-col items-center gap-2 p-3 rounded-lg transition-colors group hover:bg-gray-100"
+                className="flex flex-col items-center gap-1.5 sm:gap-2 p-2 sm:p-3 rounded-lg transition-colors group hover:bg-gray-100"
               >
-                <BookOpen className="w-6 h-6 text-blue-600 group-hover:text-blue-700" />
-                <span className="text-sm font-medium text-gray-700">Playbooks</span>
+                <BookOpen className="w-5 sm:w-6 h-5 sm:h-6 text-blue-600 group-hover:text-blue-700" />
+                <span className="text-xs sm:text-sm font-medium text-gray-700 text-center line-clamp-2">Playbooks</span>
               </button>
             </div>
           </div>
@@ -949,12 +950,12 @@ return;
 
         {/* FILE ATTACHMENTS DISPLAY - PENDING FILES */}
         {pendingFiles.length > 0 && (
-          <div className="max-w-6xl mx-auto px-6 py-3 border-b border-gray-100">
-            <div className="flex flex-wrap gap-2">
+          <div className="max-w-7xl mx-auto px-3 sm:px-4 md:px-6 py-2 sm:py-3 border-b border-gray-100">
+            <div className="flex flex-wrap gap-1.5 sm:gap-2">
               {pendingFiles.map(file => (
-                <div key={file.id} className="flex items-center gap-2 bg-blue-500 text-white rounded-full px-3 py-1.5">
-                  <FileText className="w-4 h-4" />
-                  <span className="text-xs font-medium">{file.name}</span>
+                <div key={file.id} className="flex items-center gap-1.5 bg-blue-500 text-white rounded-full px-2 sm:px-3 py-1 sm:py-1.5">
+                  <FileText className="w-3 sm:w-4 h-3 sm:h-4 flex-shrink-0" />
+                  <span className="text-[10px] sm:text-xs font-medium truncate max-w-[120px] sm:max-w-none">{file.name}</span>
                   <button
                     onClick={() => removePendingFile(file.id)}
                     className="text-blue-100 hover:text-white ml-1"
@@ -969,12 +970,12 @@ return;
 
         {/* FILE ATTACHMENTS DISPLAY - SENT FILES (gray pills) */}
         {messages.some(m => m.attachments?.length > 0) && (
-          <div className="max-w-6xl mx-auto px-6 py-3 border-b border-gray-100">
-            <div className="flex flex-wrap gap-2">
+          <div className="max-w-7xl mx-auto px-3 sm:px-4 md:px-6 py-2 sm:py-3 border-b border-gray-100">
+            <div className="flex flex-wrap gap-1.5 sm:gap-2">
               {messages.flatMap(m => m.attachments || []).map(attachment => (
-                <div key={attachment.id} className="flex items-center gap-2 bg-gray-100 rounded-full px-3 py-1.5">
-                  <FileText className="w-4 h-4 text-gray-600" />
-                  <span className="text-xs text-gray-700 font-medium">{attachment.name}</span>
+                <div key={attachment.id} className="flex items-center gap-1.5 bg-gray-100 rounded-full px-2 sm:px-3 py-1 sm:py-1.5">
+                  <FileText className="w-3 sm:w-4 h-3 sm:h-4 text-gray-600 flex-shrink-0" />
+                  <span className="text-[10px] sm:text-xs text-gray-700 font-medium truncate max-w-[120px] sm:max-w-none">{attachment.name}</span>
                   <button className="text-gray-400 hover:text-gray-600 ml-1">
                     <X className="w-3 h-3" />
                   </button>
@@ -986,10 +987,10 @@ return;
       </div>
       {/* DESIGNATION DROPDOWN */}
 {isFileReportActive && currentFieldKey === "designation" && (
-  <div className="max-w-6xl mx-auto px-6 mb-3">
+  <div className="max-w-7xl mx-auto px-3 sm:px-4 md:px-6 mb-2 sm:mb-3">
     <select
       onChange={(e) => handleFieldSelection(e.target.value)}
-      className="w-full border border-gray-300 rounded-lg px-3 py-2 bg-white text-gray-700"
+      className="w-full border border-gray-300 rounded-lg px-2 sm:px-3 py-1.5 sm:py-2 bg-white text-gray-700 text-sm focus:outline-none focus:border-blue-500"
     >
       <option value="">-- Select Designation --</option>
       <option value="Officer">Officer</option>
@@ -1004,32 +1005,32 @@ return;
 
 {/* DATE PICKER */}
 {isFileReportActive && currentFieldKey === "incidentDate" && (
-  <div className="max-w-6xl mx-auto px-6 mb-3">
+  <div className="max-w-7xl mx-auto px-3 sm:px-4 md:px-6 mb-2 sm:mb-3">
     <input
       type="date"
       onChange={(e) => handleFieldSelection(e.target.value)}
-      className="w-full border border-gray-300 rounded-lg px-3 py-2 bg-white text-gray-700"
+      className="w-full border border-gray-300 rounded-lg px-2 sm:px-3 py-1.5 sm:py-2 bg-white text-gray-700 text-sm focus:outline-none focus:border-blue-500"
     />
   </div>
 )}
 
 {/* TIME PICKER */}
 {isFileReportActive && currentFieldKey === "incidentTime" && (
-  <div className="max-w-6xl mx-auto px-6 mb-3">
+  <div className="max-w-7xl mx-auto px-3 sm:px-4 md:px-6 mb-2 sm:mb-3">
     <input
       type="time"
       onChange={(e) => handleFieldSelection(e.target.value)}
-      className="w-full border border-gray-300 rounded-lg px-3 py-2 bg-white text-gray-700"
+      className="w-full border border-gray-300 rounded-lg px-2 sm:px-3 py-1.5 sm:py-2 bg-white text-gray-700 text-sm focus:outline-none focus:border-blue-500"
     />
   </div>
 )}
 
 
       {/* INPUT AREA - FIXED AT BOTTOM */}
-      <div className="border-t border-gray-100 bg-white px-6 py-4">
-        <div className="max-w-6xl mx-auto flex items-center gap-3">
-          <label className="cursor-pointer text-gray-400 hover:text-gray-600 transition-colors">
-            <FileText className="w-5 h-5" />
+      <div className="border-t border-gray-100 bg-white px-3 sm:px-4 md:px-6 py-2 sm:py-3 md:py-4">
+        <div className="max-w-7xl mx-auto flex items-center gap-2 sm:gap-3">
+          <label className="cursor-pointer text-gray-400 hover:text-gray-600 transition-colors flex-shrink-0">
+            <FileText className="w-4 sm:w-5 h-4 sm:h-5" />
             <input
               type="file"
               multiple
@@ -1043,13 +1044,13 @@ return;
             onChange={(e) => setInputValue(e.target.value)}
             onKeyPress={(e) => e.key === "Enter" && handleSendMessage()}
             placeholder="Type your message..."
-            className="flex-1 bg-gray-50 border border-gray-200 rounded-full px-4 py-2.5 text-sm placeholder-gray-400 focus:outline-none focus:border-blue-300 focus:bg-white transition-colors"
+            className="flex-1 bg-gray-50 border border-gray-200 rounded-full px-3 sm:px-4 py-1.5 sm:py-2.5 text-xs sm:text-sm placeholder-gray-400 focus:outline-none focus:border-blue-300 focus:bg-white transition-colors"
           />
           <button
             onClick={handleSendMessage}
-            className="bg-blue-500 hover:bg-blue-600 text-white rounded-full p-2.5 transition-colors flex-shrink-0"
+            className="bg-blue-500 hover:bg-blue-600 text-white rounded-full p-1.5 sm:p-2.5 transition-colors flex-shrink-0"
           >
-            <Send className="w-5 h-5" />
+            <Send className="w-4 sm:w-5 h-4 sm:h-5" />
           </button>
         </div>
       </div>
