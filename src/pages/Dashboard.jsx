@@ -1,6 +1,7 @@
-import React from 'react';
-import { useState, useMemo } from 'react';
+import React, { useState, useMemo } from 'react';
 import { Plus, CheckSquare, Circle } from 'lucide-react';
+import { useNavigate } from "react-router-dom";
+
 
 const playbookSolutions = {
   phishing: [
@@ -83,7 +84,9 @@ const playbookSolutions = {
 };
 
 export function Dashboard() {
-    const complaints = [
+  const navigate = useNavigate();
+
+  const complaints = [
     {
       id: '#COM-001234',
       fullName: 'John Doe',
@@ -103,6 +106,7 @@ export function Dashboard() {
       createdDate: '2024-11-28',
     }
   ];
+
   const recentComplaint = complaints.length > 0 ? complaints[complaints.length - 1] : null;
 
   const defaultPlaybook = useMemo(() => {
@@ -148,22 +152,27 @@ export function Dashboard() {
     );
   };
 
-  const handleFileComplaint = () => {
-    window.dispatchEvent(new CustomEvent('navigate', { detail: 'new-complaint' }));
-  };
+ const handleFileComplaint = () => {
+  navigate("/new-complaint");
+};
 
-return (
+  
+
+  return (
     <div className="p-4 lg:p-8">
       <div className="mb-8">
         <h1 className="text-blue-600 mb-2">Dashboard</h1>
         <p className="text-gray-600">Welcome back! Here's your overview.</p>
       </div>
 
-      {/* Bento Grid - Redesigned Layout */}
-      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-6 gap-4 h-[calc(100vh-200px)]">
-        {/* Left Column - File Complaint, Current Status & Complaint Stats */}
-        <div className="md:col-span-1 lg:col-span-2 space-y-4 overflow-y-auto">
-          {/* File a Complaint */}
+      {/* 2-SIDE LAYOUT */}
+      <div className="grid grid-cols-1 lg:grid-cols-2 gap-6 h-[calc(100vh-160px)]">
+
+        {/* LEFT SIDE */}
+        <div className="space-y-4 pr-2">
+
+
+          {/* FILE A COMPLAINT */}
           <div
             onClick={handleFileComplaint}
             className="bg-white border-2 border-blue-600 rounded-2xl p-6 cursor-pointer hover:bg-blue-50 transition-colors group h-[150px] flex flex-col justify-center"
@@ -175,7 +184,7 @@ return (
             <p className="text-gray-600 text-sm">Submit new complaint</p>
           </div>
 
-          {/* Current Complaint Status */}
+          {/* CURRENT STATUS */}
           <div className="bg-gradient-to-br from-green-50 to-green-100 border-2 border-green-200 rounded-2xl p-6 h-[200px] flex flex-col justify-between">
             <div>
               <h3 className="text-green-700 font-semibold mb-4">Your Complaint Status</h3>
@@ -197,9 +206,8 @@ return (
             </div>
           </div>
 
-          {/* Complaint Stats Row */}
+          {/* COMPLAINT STATS */}
           <div className="grid grid-cols-2 gap-4">
-            {/* Open Complaints */}
             <div className="bg-white border-2 border-orange-200 rounded-2xl p-6 h-[140px] flex flex-col justify-between">
               <div>
                 <h3 className="text-orange-600 font-semibold mb-3 text-sm">Open Complaints</h3>
@@ -208,7 +216,6 @@ return (
               <p className="text-gray-600 text-xs">Active complaints</p>
             </div>
 
-            {/* Closed Complaints */}
             <div className="bg-white border-2 border-green-200 rounded-2xl p-6 h-[140px] flex flex-col justify-between">
               <div>
                 <h3 className="text-green-600 font-semibold mb-3 text-sm">Closed Complaints</h3>
@@ -219,13 +226,14 @@ return (
           </div>
         </div>
 
-        {/* Right Column - AI Insights */}
-        <div className="md:col-span-1 lg:col-span-4 h-full">
+        {/* RIGHT SIDE — AI PLAYBOOK */}
+        <div className="h-full overflow-y-auto">
           <div className="bg-blue-600 rounded-2xl p-6 flex flex-col h-full">
             <div className="mb-6">
               <h3 className="text-white font-semibold text-lg mb-1">AI Playbook Solution</h3>
               <p className="text-blue-100 text-sm">Recommended actions for your recent complaint</p>
             </div>
+
             <div className="flex-1 overflow-y-auto">
               <div className="space-y-3">
                 {playBookChecklistState.map((item) => (
@@ -245,7 +253,11 @@ return (
                         <Circle className="w-3 h-3 text-transparent" />
                       )}
                     </div>
-                    <span className={`text-white text-left text-sm sm:text-base ${item.completed ? 'line-through opacity-75' : ''}`}>
+                    <span
+                      className={`text-white text-left text-sm sm:text-base ${
+                        item.completed ? 'line-through opacity-75' : ''
+                      }`}
+                    >
                       {item.task}
                     </span>
                   </button>
@@ -254,7 +266,11 @@ return (
             </div>
           </div>
         </div>
+
       </div>
     </div>
   );
 }
+
+
+

@@ -81,6 +81,27 @@ export const disableSensitiveAutocomplete = () => {
 export const enableStrictCSP = () => {
   const meta = document.createElement('meta');
   meta.httpEquiv = 'Content-Security-Policy';
+  // Determine allowed connection sources (support local development APIs)
+  const connectSources = new Set(["'self'", 'https:']);
+
+  try {
+    const apiUrl = typeof import.meta !== 'undefined' && import.meta.env?.VITE_API_URL
+      ? new URL(import.meta.env.VITE_API_URL)
+      : null;
+
+    if (apiUrl) {
+      connectSources.add(apiUrl.origin);
+    }
+  } catch (err) {
+    warn('Unable to parse VITE_API_URL for CSP', { message: err?.message });
+  }
+
+  const hostname = window.location.hostname;
+  if (hostname === 'localhost' || hostname === '127.0.0.1') {
+    connectSources.add('http://localhost:3000');
+    connectSources.add('http://127.0.0.1:3000');
+  }
+
   // Note: frame-ancestors can only be set via HTTP headers, not meta tags
   meta.content = [
     "default-src 'self'",
@@ -88,11 +109,11 @@ export const enableStrictCSP = () => {
     "style-src 'self' 'unsafe-inline' https://fonts.googleapis.com",
     "img-src 'self' data: https:",
     "font-src 'self' https://fonts.gstatic.com data:",
-    "connect-src 'self' https:",
+    `connect-src ${Array.from(connectSources).join(' ')}`,
     "base-uri 'self'",
     "form-action 'self'",
     "upgrade-insecure-requests"
-  ].join(';');
+  ].join('; ');
 
   document.head.appendChild(meta);
 };

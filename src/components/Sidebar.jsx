@@ -3,7 +3,7 @@ import { useNavigate } from 'react-router-dom';
 
 const navItems = [
   { icon: LayoutDashboard, label: 'Dashboard', id: 'dashboard', path: '/' },
-  { icon: FileText, label: 'New Complaint', id: 'new-complaint', path: '/new-complaint' },
+  
   { icon: FileText, label: 'Manage Complaints', id: 'manage-complaints', path: '/manage-complaints' },
   { icon: MessageSquare, label: 'AI Chatbot', id: 'chatbot', path: '/chatbot' },
   { icon: Settings, label: 'Settings', id: 'settings', path: '/settings' },

@@ -1,9 +1,9 @@
 import { useState, useRef, useEffect } from "react";
-import { Shield, FileText, Activity, AlertTriangle, BookOpen } from "lucide-react";
+import { Shield, FileText, Activity, AlertTriangle, BookOpen, ChevronDown, ChevronUp, X, Send } from "lucide-react";
 import ChatMessage from "../components/ChatMessage";
 import QuickActionButton from "../components/QuickActionButton";
 import MessageInput from "../components/MessageInput";
-import Footer from "../components/Footer";
+import { submitComplaint, fetchComplaintStatus } from "../api/complaint";
 
 /**
  * FINAL MERGED App.jsx (priority: App.jsx)
@@ -57,89 +57,102 @@ You are a CERT (Computer Emergency Response Team) incident response expert.
 
 Input: A JSON object with risk_score, risk_category, priority, attack_type, and summary.
 
-Generate a CONCISE CERT incident response playbook in bullet-point format only.
+Generate a CONCISE CERT incident response playbook. Keep it SHORT and SIMPLE.
 
-Format:
+Format EXACTLY like this (no extra text):
 
 🚨 CERT Incident Response Playbook — {attack_type}
 Priority: {priority} | Risk: {risk_category} ({risk_score}/100)
 
 📋 INCIDENT OVERVIEW
-• Brief description of the attack
-• Primary impact areas
-• Affected systems/users
+• [Max 15 words - brief attack description]
+• [Max 15 words - primary impact areas]
+• [Max 15 words - affected systems/users]
 
 🔍 DETECTION & VALIDATION
-• Indicators of compromise (IOCs)
-• Log sources to check
-• Validation steps
+• [Max 15 words - indicators of compromise]
+• [Max 15 words - log sources to check]
+• [Max 15 words - validation steps]
 
 🛡️ IMMEDIATE CONTAINMENT
-• Isolation actions (network/system)
-• Access restrictions
-• Communication protocols
+• [Max 15 words - isolation actions]
+• [Max 15 words - access restrictions]
+• [Max 15 words - communication protocols]
 
 🔬 INVESTIGATION
-• Evidence collection points
-• Forensic artifacts to preserve
-• Key questions to answer
+• [Max 15 words - evidence collection]
+• [Max 15 words - forensic artifacts]
+• [Max 15 words - key questions]
 
 🧹 ERADICATION
-• Threat removal steps
-• Vulnerability patching
-• Security control updates
+• [Max 15 words - threat removal steps]
+• [Max 15 words - vulnerability patching]
+• [Max 15 words - security control updates]
 
 ♻️ RECOVERY
-• System restoration sequence
-• Validation checks
-• Monitoring requirements
+• [Max 15 words - system restoration]
+• [Max 15 words - validation checks]
+• [Max 15 words - monitoring requirements]
 
 📢 REPORTING & COMPLIANCE
-• Internal notifications
-• External reporting (if required)
-• Documentation needs
+• [Max 15 words - internal notifications]
+• [Max 15 words - external reporting]
+• [Max 15 words - documentation needs]
 
 🎯 PREVENTION
-• Security improvements
-• Policy updates
-• Training requirements
+• [Max 15 words - security improvements]
+• [Max 15 words - policy updates]
+• [Max 15 words - training requirements]
 
-Keep all points concise. Use technical terminology. Maximum 3-4 bullets per section.
+IMPORTANT RULES:
+- Each bullet MUST be max 15 words
+- NO extra paragraphs or explanations
+- EXACTLY 3 bullets per section
+- Use technical but concise language
+- Be direct and brief
+- No padding or filler text
 `.trim();
 const USER_PLAYBOOK_SYSTEM_PROMPT = `
 You are a friendly cybersecurity guide helping non-technical users.
 
 Input: A JSON object with risk_score, risk_category, priority, attack_type, and summary.
 
-Generate EXACTLY 10 simple action steps that anyone can understand and follow.
+Generate EXACTLY 10 simple action steps that anyone can understand and follow. Keep it SHORT and SIMPLE.
 
-Format:
+Format EXACTLY like this (no extra text):
 
 👤 User's Action Guide — {attack_type}
 Risk Level: {risk_category} | Priority: {priority}
 
 🤔 What Happened?
-[One simple sentence explaining the incident like you're talking to a friend]
+[ONE simple sentence only - max 15 words]
 
 ✅ YOUR 10-STEP ACTION PLAN:
 
-1. 🚨 [First immediate action - what to do RIGHT NOW]
-2. 🔌 [Second step - usually about disconnecting/stopping something]
-3. 📸 [Third step - about documenting/saving evidence]
-4. 👥 [Fourth step - who to inform]
-5. 🔒 [Fifth step - securing accounts/passwords]
-6. 📝 [Sixth step - what information to gather]
-7. ⏳ [Seventh step - what to monitor]
-8. 🛡️ [Eighth step - protection measure]
-9. 📞 [Ninth step - when to call for help]
-10. 💡 [Tenth step - prevention tip for future]
+1. 🚨 [Max 10 words - immediate action]
+2. 🔌 [Max 10 words - disconnect/stop]
+3. 📸 [Max 10 words - save evidence]
+4. 👥 [Max 10 words - tell someone]
+5. 🔒 [Max 10 words - secure accounts]
+6. 📝 [Max 10 words - gather info]
+7. ⏳ [Max 10 words - monitor activity]
+8. 🛡️ [Max 10 words - protection measure]
+9. 📞 [Max 10 words - get help]
+10. 💡 [Max 10 words - prevention tip]
 
 ⚠️ DON'T:
-• [One thing NOT to do]
-• [Second thing NOT to do]
-• [Third thing NOT to do]
+• [Max 10 words - one thing NOT to do]
+• [Max 10 words - second thing NOT to do]
+• [Max 10 words - third thing NOT to do]
 
-Use extremely simple language. Each step should be ONE clear action. No jargon. Use emojis. Be friendly and reassuring.
+IMPORTANT RULES:
+- Each step must be SHORT (max 10-15 words)
+- NO paragraphs or long explanations
+- NO extra details or stories
+- Use simple words only
+- One action per step
+- No jargon or technical terms
+- Be brief and direct
 `.trim();
 
 
@@ -180,7 +193,7 @@ function simplifyScannerReport(report) {
 /* ---------------- FILE REPORT FIELD DEFINITIONS ---------------- */
 const FILE_REPORT_FIELDS = [
   { key: "name", question: "What is your full name?", min: 3, max: 50 },
-  { key: "role", question: "Select your role:", min: 5, max: 40 },
+  { key: "designation", question: "Select your designation:", min: 5, max: 40 },
   { key: "department", question: "Enter your Department / Unit:", min: 2, max: 50 },
   { key: "location", question: "Enter your Location / Station:", min: 2, max: 50 },
   { key: "complaintType", question: "What is the complaint type?", min: 3, max: 50 },
@@ -219,10 +232,12 @@ function App() {
   ]);
 
   const [inputValue, setInputValue] = useState("");
+  const [pendingFiles, setPendingFiles] = useState([]);
   const [isFileReportActive, setIsFileReportActive] = useState(false);
   const [fileReportStep, setFileReportStep] = useState(0);
   const [isEvidenceStep, setIsEvidenceStep] = useState(false);
   const [isRiskAnalysisMode, setIsRiskAnalysisMode] = useState(false);
+  const [isCheckStatusMode, setIsCheckStatusMode] = useState(false);
   // 👉 NEW: Playbook mode flag
   const [isPlaybookMode, setIsPlaybookMode] = useState(false);
   // 👉 NEW: Track latest user playbook for download
@@ -231,7 +246,7 @@ function App() {
 
   const [fileReportData, setFileReportData] = useState({
     name: "",
-    role: "",
+    designation: "",
     department: "",
     location: "",
     complaintType: "",
@@ -239,10 +254,14 @@ function App() {
     incidentTime: "",
     description: "",
     suspectedSource: "",
-    evidence: [],
+    evidences: [],
   });
 
+  const [quickActionsOpen, setQuickActionsOpen] = useState(false);
+
   const chatContainerRef = useRef(null);
+  const lastTrackingIdRef = useRef("");
+  
 
   /* ---------------- SCROLL ---------------- */
   const scrollToBottom = () => {
@@ -269,27 +288,52 @@ function App() {
   };
 
   /* ---------------- PROCESS FILE REPORT ANSWER ---------------- */
-  const processFileReportAnswer = (userText) => {
+  const processFileReportAnswer = async (userText) => {
     if (isEvidenceStep) {
       if (userText.toLowerCase() !== "done") {
         pushAiMessage("Please upload any evidence using the attachment button. When finished, type 'done'.");
         return;
       }
 
-      // Finalize and show JSON
-      const finalPayload = { ...fileReportData };
-      pushAiMessage(JSON.stringify(finalPayload, null, 2));
+      // Finalize payload and submit to backend
+      const finalPayload = {
+        ...fileReportData,
+        designation: fileReportData.designation || "",
+        submittedAt: new Date().toISOString(),
+      };
 
-      // Reset to normal chat mode
-      setIsFileReportActive(false);
-      setIsEvidenceStep(false);
-      setFileReportStep(0);
-      
-      // Auto-switch to normal chat
-      setTimeout(() => {
-        pushAiMessage("✅ File report submitted successfully! You can now ask me anything or start another quick action.");
-      }, 500);
-      
+      pushAiMessage("⏳ Submitting your complaint. Please wait...");
+
+      const response = await submitComplaint(finalPayload);
+
+      if (response.success) {
+        pushAiMessage(`✅ ${response.message}`);
+
+        // Reset to normal chat mode
+        setIsFileReportActive(false);
+        setIsEvidenceStep(false);
+        setFileReportStep(0);
+        setFileReportData({
+          name: "",
+          designation: "",
+          department: "",
+          location: "",
+          complaintType: "",
+          incidentDate: "",
+          incidentTime: "",
+          description: "",
+          suspectedSource: "",
+          evidences: [],
+        });
+
+        setTimeout(() => {
+          pushAiMessage(`Your complaint has been filed. Tracking ID: ${response.data.trackingId
+}`);
+        }, 500);
+      } else {
+        pushAiMessage(`❌ ${response.message}`);
+      }
+
       return;
     }
 
@@ -336,8 +380,8 @@ function App() {
     }
   };
 
-  /* ---------------- FIELD SELECTION (role/date/time quick pick) ---------------- */
-  const handleFieldSelection = (selectedValue) => {
+  /* ---------------- FIELD SELECTION (designation/date/time quick pick) ---------------- */
+  const handleFieldSelection = async (selectedValue) => {
     if (!selectedValue) return;
     // Add user message showing the selection
     setMessages((prev) => [
@@ -349,13 +393,12 @@ function App() {
         timestamp: new Date().toLocaleTimeString("en-US", { hour: "2-digit", minute: "2-digit" }),
       },
     ]);
-    processFileReportAnswer(selectedValue);
+    await processFileReportAnswer(selectedValue);
   };
 
   /* ---------------- HANDLE FILES UPLOAD FROM INPUT ----------------
-     - create attachments preview
-     - add to messages
-     - if in file-report/evidence step, update fileReportData.evidence
+     - Store files temporarily in pendingFiles state
+     - Only add to messages when user sends message
   */
   const handleSendFiles = (files) => {
     if (!files || files.length === 0) return;
@@ -367,53 +410,35 @@ function App() {
       url: URL.createObjectURL(file),
       size: file.size,
       mimeType: file.type,
-      // optionally you can attach the original File object under `file` if you plan to upload to server:
-      // file
     }));
 
-    setMessages((prev) => [
-      ...prev,
-      {
-        id: `${Date.now()}-${Math.random()}`,
-        text: attachments.length === 1 ? `📎 Evidence: ${attachments[0].name}` : `📎 ${attachments.length} files uploaded`,
-        sender: "user",
-        timestamp: new Date().toLocaleTimeString("en-US", { hour: "2-digit", minute: "2-digit" }),
-        attachments,
-      },
-    ]);
+    // Store in pending files (not yet sent)
+    setPendingFiles((prev) => [...prev, ...attachments]);
+  };
 
-    // update fileReportData if active
-    if (isFileReportActive) {
-      setFileReportData((prev) => ({
-        ...prev,
-        evidence: [
-          ...prev.evidence,
-          ...attachments.map((a) => ({ id: a.id, name: a.name, size: a.size, mimeType: a.mimeType, url: a.url })),
-        ],
-      }));
-
-      if (isEvidenceStep) {
-        pushAiMessage("✅ Evidence received! Upload more files or type 'done' to submit.");
-      }
-    }
+  /* Remove a pending file */
+  const removePendingFile = (fileId) => {
+    setPendingFiles((prev) => prev.filter((f) => f.id !== fileId));
   };
 
   /* ---------------- SEND MESSAGE (text) ---------------- */
   const handleSendMessage = async () => {
-    if (!inputValue.trim()) return;
+    if (!inputValue.trim() && pendingFiles.length === 0) return;
 
     const userText = inputValue.trim();
     setInputValue("");
 
     const userMessage = {
       id: Date.now().toString(),
-      text: userText,
+      text: userText || (pendingFiles.length === 1 ? `📎 ${pendingFiles[0].name}` : `📎 ${pendingFiles.length} files uploaded`),
       sender: "user",
       timestamp: new Date().toLocaleTimeString("en-US", { hour: "2-digit", minute: "2-digit" }),
+      attachments: pendingFiles.length > 0 ? [...pendingFiles] : undefined,
     };
 
     setMessages((prev) => [...prev, userMessage]);
-    
+    setPendingFiles([]);
+
     // --------------------------------------------------
     // 📘 PLAYBOOK MODE (BOTH CERT & USER)
     // --------------------------------------------------
@@ -520,7 +545,51 @@ function App() {
 
     // FILE REPORT MODE
     if (isFileReportActive) {
-      processFileReportAnswer(userText);
+      if (userText) {
+        await processFileReportAnswer(userText);
+      }
+      
+      // Update fileReportData if files exist
+      if (userMessage.attachments) {
+        setFileReportData((prev) => ({
+          ...prev,
+          evidences: [
+            ...prev.evidences,
+            ...userMessage.attachments.map((a) => ({
+              id: a.id,
+              name: a.name,
+              size: a.size,
+              mimeType: a.mimeType,
+              url: a.url,
+            })),
+          ],
+        }));
+        
+        if (isEvidenceStep) {
+          pushAiMessage("✅ Evidence received! Upload more files or type 'done' to submit.");
+        }
+      }
+      return;
+    }
+
+    // CHECK STATUS MODE
+    if (isCheckStatusMode) {
+      const trackingId = userText.trim();
+      if (!trackingId) {
+        pushAiMessage("Please enter a valid tracking ID so I can proceed.");
+        return;
+      }
+
+      lastTrackingIdRef.current = trackingId;
+      pushAiMessage(`⏳ Checking status for Tracking ID ${trackingId}...`);
+      setIsCheckStatusMode(false);
+
+      const statusResponse = await fetchComplaintStatus(trackingId);
+      if (statusResponse.success) {
+        pushAiMessage(`📊 Current status for ${trackingId}: ${statusResponse.status}`);
+      } else {
+        pushAiMessage(`❌ ${statusResponse.message}`);
+      }
       return;
     }
 
@@ -591,7 +660,19 @@ function App() {
             setIsRiskAnalysisMode(false);
             return;
           }
-          pushAiMessage(JSON.stringify(validated, null, 2));
+
+          // Build complete report with all fields in JSON format
+          // Push complete report as single message in JSON format
+          // Pretty-print JSON even if AI returns one-line text
+          let formattedJSON = "";
+          try {
+            formattedJSON = JSON.stringify(JSON.parse(jsonResponse), null, 2);
+          } catch {
+            formattedJSON = JSON.stringify(validated, null, 2);
+          }
+
+          // Push entire JSON as ONE single message
+          pushAiMessage(formattedJSON);
           
           // Reset to normal chat mode
           setIsRiskAnalysisMode(false);
@@ -641,10 +722,12 @@ function App() {
       setFileReportStep(0);
       setIsRiskAnalysisMode(false);
       setIsPlaybookMode(false);
+      setIsCheckStatusMode(false);
+      lastTrackingIdRef.current = "";
 
       setFileReportData({
         name: "",
-        role: "",
+        designation: "",
         department: "",
         location: "",
         complaintType: "",
@@ -652,7 +735,7 @@ function App() {
         incidentTime: "",
         description: "",
         suspectedSource: "",
-        evidence: [],
+        evidences: [],
       });
 
       setMessages((prev) => [
@@ -672,6 +755,32 @@ function App() {
       return;
     }
 
+    if (action === "Check Status") {
+      setIsCheckStatusMode(true);
+      setIsFileReportActive(false);
+      setIsEvidenceStep(false);
+      setFileReportStep(0);
+      setIsRiskAnalysisMode(false);
+      setIsPlaybookMode(false);
+      lastTrackingIdRef.current = "";
+
+      setMessages((prev) => [
+        ...prev,
+        {
+          id: Date.now().toString(),
+          text: "📊 Check Status initiated",
+          sender: "user",
+          timestamp: new Date().toLocaleTimeString("en-US", { hour: "2-digit", minute: "2-digit" }),
+        },
+      ]);
+
+      setTimeout(() => {
+        pushAiMessage("Please share your complaint tracking ID so I can look it up.");
+      }, 200);
+
+      return;
+    }
+
     if (action === "Risk Analysis") {
       // Reset all modes first
       setIsRiskAnalysisMode(true);
@@ -679,8 +788,20 @@ function App() {
       setIsEvidenceStep(false);
       setFileReportStep(0);
       setIsPlaybookMode(false);
-      pushAiMessage("🛡 Risk Analysis activated.\nPaste the JSON incident report and press Send.");
-      return;
+      setIsCheckStatusMode(false);
+      lastTrackingIdRef.current = "";
+   setMessages(prev => [
+  ...prev,
+  {
+    id: Date.now().toString(),
+    text: "🛡 Risk Analysis activated. Paste the JSON incident report and press Send.",
+    sender: "user",
+    timestamp: new Date().toLocaleTimeString("en-US", { hour: "2-digit", minute: "2-digit" })
+  },
+]);
+
+return;
+
     }
     
     if (action === "Playbooks") {
@@ -690,11 +811,19 @@ function App() {
       setIsFileReportActive(false);
       setIsEvidenceStep(false);
       setFileReportStep(0);
+      setIsCheckStatusMode(false);
+      lastTrackingIdRef.current = "";
+setMessages(prev => [
+  ...prev,
+  {
+    id: Date.now().toString(),
+    text: "📘 Playbook mode activated. Please paste the JSON that already contains risk_score, risk_category, priority, attack_type, and summary. Then press Send.",
+    sender: "user",
+    timestamp: new Date().toLocaleTimeString("en-US", { hour: "2-digit", minute: "2-digit" })
+  },
+]);
+return;
 
-      pushAiMessage(
-        "📘 Playbook mode activated.\nPlease paste the JSON that already contains risk_score, risk_category, priority, attack_type, and summary. Then press Send."
-      );
-      return;
     }
 
     // fallback
@@ -713,96 +842,221 @@ function App() {
 
   /* ---------------- RENDER JSX ---------------- */
   return (
-    <div className="min-h-screen bg-gradient-to-br from-[#F2F2F3] via-[#EEEEEE] to-[#E8E8E8] flex flex-col">
+    <div className="min-h-screen bg-white flex flex-col">
       {/* HEADER */}
-      <header className="bg-gradient-to-r from-[#002B5C] via-[#003366] to-[#1B3A5F] border-b-4 border-[#0066CC] py-6 px-8 shadow-2xl">
-        <div className="max-w-7xl mx-auto flex items-center gap-4">
-          <div className="bg-gradient-to-br from-[#0078D4] to-[#00BCD4] p-3 rounded-lg shadow-lg">
-            <Shield className="w-8 h-8 text-white" />
-          </div>
-          <div>
-            <h1 className="text-3xl font-bold text-white tracking-wide">Cyber AI Assistant</h1>
-            <p className="text-[#7D9CB7] text-sm mt-1">24/7 intelligent support for incident response</p>
-          </div>
+      <header className="border-b border-gray-100 py-6 px-6">
+        <div className="max-w-6xl mx-auto">
+          <h1 className="text-3xl font-bold text-blue-600 mb-1">AI Chatbot</h1>
+          <p className="text-gray-500 text-sm">Ask me anything</p>
         </div>
       </header>
 
-      {/* MAIN */}
-      <main className="flex-1 max-w-7xl w-full mx-auto px-8 py-6">
-        <div className="bg-white rounded-lg shadow-2xl border border-[#7D9CB7]/30 overflow-hidden flex flex-col" style={{ height: "82vh" }}>
-          {/* MESSAGE LIST */}
-          <div ref={chatContainerRef} className="flex-1 overflow-y-auto p-6 space-y-4">
-            {messages.map((message) => (
-              <ChatMessage
-                key={message.id}
-                message={message}
-                showRoleDropdown={
-                  isFileReportActive &&
-                  !isEvidenceStep &&
-                  currentFieldKey === "role" &&
-                  message.sender === "ai" &&
-                  message.text &&
-                  message.text.toLowerCase().includes("select your role")
-                }
-                showDatePicker={
-                  isFileReportActive && !isEvidenceStep && currentFieldKey === "incidentDate" && message.sender === "ai"
-                }
-                showTimePicker={
-                  isFileReportActive && !isEvidenceStep && currentFieldKey === "incidentTime" && message.sender === "ai"
-                }
-                onFieldSelect={handleFieldSelection}
-                onQuickAnswer={handleFieldSelection} // support both callback names
-              />
-            ))}
-            
-            {/* 👉 Download Button for User Playbook */}
-            {latestUserPlaybook && (
-              <div className="flex justify-center mt-4">
+      {/* MAIN CHAT AREA - FLEX GROW */}
+      <main className="flex-1 flex flex-col max-w-6xl w-full mx-auto overflow-hidden">
+        <div
+          ref={chatContainerRef}
+          className="flex-1 px-6 py-8 space-y-6 overflow-y-scroll"
+          style={{ maxHeight: "calc(100vh - 210px)" }}
+        >
+          {messages.map((message) => (
+            <div key={message.id} className={`flex ${message.sender === "user" ? "justify-end" : "justify-start"}`}>
+              {message.isDownloadButton ? (
                 <button
                   onClick={handleDownloadPlaybook}
-                  className="bg-gradient-to-r from-green-500 to-green-600 hover:from-green-600 hover:to-green-700 text-white font-bold py-2 px-6 rounded-lg shadow-lg transition-all duration-200 flex items-center gap-2"
+                  className="flex gap-2 items-center bg-blue-500 hover:bg-blue-600 text-white rounded-lg px-4 py-2 text-sm font-medium transition-colors"
                 >
-                  <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-4l-4 4m0 0l-4-4m4 4V4" />
-                  </svg>
-                  Download User Playbook
+                  <FileText className="w-4 h-4" />
+                  {message.text}
                 </button>
-              </div>
-            )}
-          </div>
-
-          {/* QUICK ACTIONS */}
-          <div className="px-6 py-5 bg-gradient-to-r from-[#F2F2F3] to-[#EEEEEE] border-t-2">
-            <h3 className="text-[#2C3E50] text-sm font-bold mb-3 uppercase">Quick Actions:</h3>
-            <div className="grid grid-cols-4 gap-3">
-              <QuickActionButton icon={<FileText className="w-5 h-5" />} label="File Report" onClick={() => handleQuickAction("File Report")} />
-              <QuickActionButton icon={<Activity className="w-5 h-5" />} label="Check Status" onClick={() => handleQuickAction("Check Status")} />
-              <QuickActionButton icon={<AlertTriangle className="w-5 h-5" />} label="Risk Analysis" onClick={() => handleQuickAction("Risk Analysis")} />
-              <QuickActionButton icon={<BookOpen className="w-5 h-5" />} label="Playbooks" onClick={() => handleQuickAction("Playbooks")} />
+              ) : message.sender === "ai" ? (
+                <div className="flex gap-3 max-w-2xl">
+                  <div className="flex-shrink-0 w-8 h-8 rounded-lg bg-blue-100 flex items-center justify-center">
+                    <Shield className="w-5 h-5 text-blue-600" />
+                  </div>
+                  <div className="bg-gray-100 rounded-2xl px-4 py-3 text-gray-700 text-sm leading-relaxed relative whitespace-pre-wrap">
+                    {message.text}
+                    <div className="text-[10px] text-gray-500 mt-1 text-right">
+                      {message.timestamp}
+                    </div>
+                  </div>
+                </div>
+              ) : (
+                <div className="flex gap-2 max-w-2xl items-end">
+                  <div className="bg-blue-500 text-white rounded-2xl px-4 py-3 text-sm font-medium leading-relaxed break-words max-w-xl relative whitespace-pre-wrap">
+                    {message.text}
+                    <div className="text-[10px] text-blue-200 mt-1 text-right">
+                      {message.timestamp}
+                    </div>
+                  </div>
+                  <div className="w-8 h-8 rounded-full bg-blue-500 flex items-center justify-center flex-shrink-0">
+                    <span className="text-white text-sm font-semibold">👤</span>
+                  </div>
+                </div>
+              )}
             </div>
-          </div>
-
-          {/* SAFETY NOTE */}
-          <div className="px-6 py-4">
-            <div className="bg-yellow-100 border-2 border-yellow-500 rounded-lg px-4 py-2.5 flex items-center gap-2">
-              <AlertTriangle className="w-5 h-5 text-orange-600" />
-              <span className="text-sm font-semibold">AI suggestion – verify before applying</span>
-            </div>
-          </div>
-
-          {/* INPUT */}
-          <MessageInput
-            value={inputValue}
-            onChange={setInputValue}
-            onSend={handleSendMessage}
-            onSendFiles={handleSendFiles}
-          />
+          ))}
         </div>
       </main>
 
-      <Footer />
+      {/* QUICK ACTIONS SECTION - FIXED */}
+      <div className="border-t border-gray-100 bg-white">
+        <div
+          className="max-w-6xl mx-auto px-6 py-4 cursor-pointer flex items-center justify-between hover:bg-gray-50 transition-colors"
+          onClick={() => setQuickActionsOpen(!quickActionsOpen)}
+        >
+          <h3 className="text-gray-600 text-xs font-bold uppercase tracking-wide">Quick Actions</h3>
+          {quickActionsOpen ? (
+            <ChevronUp className="w-4 h-4 text-gray-400" />
+          ) : (
+            <ChevronDown className="w-4 h-4 text-gray-400" />
+          )}
+        </div>
+
+        {quickActionsOpen && (
+          <div className="max-w-6xl mx-auto px-6 pb-6 pt-2 border-b border-gray-100">
+            <div className="grid grid-cols-4 gap-6">
+              <button
+                onClick={() => handleQuickAction("File Report")}
+                className="flex flex-col items-center gap-2 p-3 rounded-lg transition-colors group hover:bg-gray-100"
+              >
+                <FileText className="w-6 h-6 text-blue-600 group-hover:text-blue-700" />
+                <span className="text-sm font-medium text-gray-700">File Report</span>
+              </button>
+              <button
+                onClick={() => handleQuickAction("Check Status")}
+                className="flex flex-col items-center gap-2 p-3 rounded-lg transition-colors group hover:bg-gray-100"
+              >
+                <Activity className="w-6 h-6 text-blue-600 group-hover:text-blue-700" />
+                <span className="text-sm font-medium text-gray-700">Check Status</span>
+              </button>
+              <button
+                onClick={() => handleQuickAction("Risk Analysis")}
+                className="flex flex-col items-center gap-2 p-3 rounded-lg transition-colors group hover:bg-gray-100"
+              >
+                <AlertTriangle className="w-6 h-6 text-blue-600 group-hover:text-blue-700" />
+                <span className="text-sm font-medium text-gray-700">Risk Analysis</span>
+              </button>
+              <button
+                onClick={() => handleQuickAction("Playbooks")}
+                className="flex flex-col items-center gap-2 p-3 rounded-lg transition-colors group hover:bg-gray-100"
+              >
+                <BookOpen className="w-6 h-6 text-blue-600 group-hover:text-blue-700" />
+                <span className="text-sm font-medium text-gray-700">Playbooks</span>
+              </button>
+            </div>
+          </div>
+        )}
+
+        {/* FILE ATTACHMENTS DISPLAY - PENDING FILES */}
+        {pendingFiles.length > 0 && (
+          <div className="max-w-6xl mx-auto px-6 py-3 border-b border-gray-100">
+            <div className="flex flex-wrap gap-2">
+              {pendingFiles.map(file => (
+                <div key={file.id} className="flex items-center gap-2 bg-blue-500 text-white rounded-full px-3 py-1.5">
+                  <FileText className="w-4 h-4" />
+                  <span className="text-xs font-medium">{file.name}</span>
+                  <button
+                    onClick={() => removePendingFile(file.id)}
+                    className="text-blue-100 hover:text-white ml-1"
+                  >
+                    <X className="w-3 h-3" />
+                  </button>
+                </div>
+              ))}
+            </div>
+          </div>
+        )}
+
+        {/* FILE ATTACHMENTS DISPLAY - SENT FILES (gray pills) */}
+        {messages.some(m => m.attachments?.length > 0) && (
+          <div className="max-w-6xl mx-auto px-6 py-3 border-b border-gray-100">
+            <div className="flex flex-wrap gap-2">
+              {messages.flatMap(m => m.attachments || []).map(attachment => (
+                <div key={attachment.id} className="flex items-center gap-2 bg-gray-100 rounded-full px-3 py-1.5">
+                  <FileText className="w-4 h-4 text-gray-600" />
+                  <span className="text-xs text-gray-700 font-medium">{attachment.name}</span>
+                  <button className="text-gray-400 hover:text-gray-600 ml-1">
+                    <X className="w-3 h-3" />
+                  </button>
+                </div>
+              ))}
+            </div>
+          </div>
+        )}
+      </div>
+      {/* DESIGNATION DROPDOWN */}
+{isFileReportActive && currentFieldKey === "designation" && (
+  <div className="max-w-6xl mx-auto px-6 mb-3">
+    <select
+      onChange={(e) => handleFieldSelection(e.target.value)}
+      className="w-full border border-gray-300 rounded-lg px-3 py-2 bg-white text-gray-700"
+    >
+      <option value="">-- Select Designation --</option>
+      <option value="Officer">Officer</option>
+      <option value="Sergeant">Sergeant</option>
+      <option value="Lieutenant">Lieutenant</option>
+      <option value="Captain">Captain</option>
+      <option value="Retired Officer">Retired Officer</option>
+      <option value="Dependent">Dependent</option>
+    </select>
+  </div>
+)}
+
+{/* DATE PICKER */}
+{isFileReportActive && currentFieldKey === "incidentDate" && (
+  <div className="max-w-6xl mx-auto px-6 mb-3">
+    <input
+      type="date"
+      onChange={(e) => handleFieldSelection(e.target.value)}
+      className="w-full border border-gray-300 rounded-lg px-3 py-2 bg-white text-gray-700"
+    />
+  </div>
+)}
+
+{/* TIME PICKER */}
+{isFileReportActive && currentFieldKey === "incidentTime" && (
+  <div className="max-w-6xl mx-auto px-6 mb-3">
+    <input
+      type="time"
+      onChange={(e) => handleFieldSelection(e.target.value)}
+      className="w-full border border-gray-300 rounded-lg px-3 py-2 bg-white text-gray-700"
+    />
+  </div>
+)}
+
+
+      {/* INPUT AREA - FIXED AT BOTTOM */}
+      <div className="border-t border-gray-100 bg-white px-6 py-4">
+        <div className="max-w-6xl mx-auto flex items-center gap-3">
+          <label className="cursor-pointer text-gray-400 hover:text-gray-600 transition-colors">
+            <FileText className="w-5 h-5" />
+            <input
+              type="file"
+              multiple
+              className="hidden"
+              onChange={(e) => handleSendFiles(e.target.files)}
+            />
+          </label>
+          <input
+            type="text"
+            value={inputValue}
+            onChange={(e) => setInputValue(e.target.value)}
+            onKeyPress={(e) => e.key === "Enter" && handleSendMessage()}
+            placeholder="Type your message..."
+            className="flex-1 bg-gray-50 border border-gray-200 rounded-full px-4 py-2.5 text-sm placeholder-gray-400 focus:outline-none focus:border-blue-300 focus:bg-white transition-colors"
+          />
+          <button
+            onClick={handleSendMessage}
+            className="bg-blue-500 hover:bg-blue-600 text-white rounded-full p-2.5 transition-colors flex-shrink-0"
+          >
+            <Send className="w-5 h-5" />
+          </button>
+        </div>
+      </div>
     </div>
   );
 }
 
 export default App;
+
+

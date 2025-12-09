@@ -56,7 +56,7 @@ const ChatMessage = ({
         `}
       >
 
-        {/* ---------- ROLE DROPDOWN ---------- */}
+        {/* ---------- DESIGNATION DROPDOWN ---------- */}
         {!isUser && showRoleDropdown && (
           <div className="mb-3">
             <select
@@ -64,7 +64,7 @@ const ChatMessage = ({
               onChange={handleRoleChange}
               className="w-full px-3 py-2 border border-gray-300 rounded-full bg-white text-xs focus:ring-2 focus:ring-[#0066CC]"
             >
-              <option value="" disabled>Select your role</option>
+              <option value="" disabled>Select your designation</option>
               {roles.map(role => (
                 <option key={role} value={role}>{role}</option>
               ))}
